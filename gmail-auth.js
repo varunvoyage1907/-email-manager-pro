@@ -9,45 +9,44 @@ class GmailAuth {
 
     async initializeAuth() {
         try {
-            // Load Google API client
-            await this.loadGoogleAPI();
+            // Wait for gapi to be available
+            await this.waitForGapi();
             
-            // Initialize the API client
-            await gapi.load('auth2', () => {
-                gapi.auth2.init({
-                    client_id: GMAIL_CONFIG.CLIENT_ID,
-                    scope: GMAIL_CONFIG.SCOPES.join(' ')
-                }).then(() => {
-                    this.authInstance = gapi.auth2.getAuthInstance();
-                    this.isSignedIn = this.authInstance.isSignedIn.get();
-                    
-                    if (this.isSignedIn) {
-                        this.currentUser = this.authInstance.currentUser.get();
-                        this.updateUIForSignedInUser();
-                    } else {
-                        this.updateUIForSignedOutUser();
-                    }
-                    
-                    // Listen for sign-in state changes
-                    this.authInstance.isSignedIn.listen(this.updateSignInStatus.bind(this));
-                });
+            // Load auth2 library
+            await new Promise((resolve) => {
+                gapi.load('auth2', resolve);
             });
-
-            // Load Gmail API
-            await gapi.load('client', () => {
-                const initConfig = {
-                    clientId: GMAIL_CONFIG.CLIENT_ID,
-                    discoveryDocs: GMAIL_CONFIG.DISCOVERY_DOCS,
-                    scope: GMAIL_CONFIG.SCOPES.join(' ')
-                };
-                
-                // Only add API key if it exists
-                if (GMAIL_CONFIG.API_KEY) {
-                    initConfig.apiKey = GMAIL_CONFIG.API_KEY;
-                }
-                
-                gapi.client.init(initConfig);
+            
+            // Load client library  
+            await new Promise((resolve) => {
+                gapi.load('client', resolve);
             });
+            
+            // Initialize auth2
+            await gapi.auth2.init({
+                client_id: GMAIL_CONFIG.CLIENT_ID,
+                scope: GMAIL_CONFIG.SCOPES.join(' ')
+            });
+            
+            // Initialize client
+            await gapi.client.init({
+                clientId: GMAIL_CONFIG.CLIENT_ID,
+                discoveryDocs: GMAIL_CONFIG.DISCOVERY_DOCS,
+                scope: GMAIL_CONFIG.SCOPES.join(' ')
+            });
+            
+            this.authInstance = gapi.auth2.getAuthInstance();
+            this.isSignedIn = this.authInstance.isSignedIn.get();
+            
+            if (this.isSignedIn) {
+                this.currentUser = this.authInstance.currentUser.get();
+                this.updateUIForSignedInUser();
+            } else {
+                this.updateUIForSignedOutUser();
+            }
+            
+            // Listen for sign-in state changes
+            this.authInstance.isSignedIn.listen(this.updateSignInStatus.bind(this));
 
         } catch (error) {
             console.error('Failed to initialize Gmail authentication:', error);
@@ -55,20 +54,25 @@ class GmailAuth {
         }
     }
 
-    loadGoogleAPI() {
-        return new Promise((resolve, reject) => {
+    waitForGapi() {
+        return new Promise((resolve) => {
             if (typeof gapi !== 'undefined') {
                 resolve();
                 return;
             }
-
-            const script = document.createElement('script');
-            script.src = 'https://apis.google.com/js/api.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
+            
+            const checkGapi = () => {
+                if (typeof gapi !== 'undefined') {
+                    resolve();
+                } else {
+                    setTimeout(checkGapi, 100);
+                }
+            };
+            checkGapi();
         });
     }
+
+
 
     async signIn() {
         try {
@@ -292,6 +296,9 @@ class GmailAuth {
 }
 
 // Initialize Gmail authentication when the page loads
-window.addEventListener('DOMContentLoaded', () => {
-    window.gmailAuth = new GmailAuth();
+window.addEventListener('load', () => {
+    // Small delay to ensure all scripts are loaded
+    setTimeout(() => {
+        window.gmailAuth = new GmailAuth();
+    }, 1000);
 }); 
