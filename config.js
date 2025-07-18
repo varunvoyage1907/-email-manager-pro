@@ -3,10 +3,10 @@
 
 const GMAIL_CONFIG = {
     // Your OAuth 2.0 Client ID from Google Cloud Console
-    CLIENT_ID: process.env.GMAIL_CLIENT_ID || '792263029043-5jf8fc8b2nni5jh871giq9109qgfc5t6.apps.googleusercontent.com',
+    CLIENT_ID: '792263029043-5jf8fc8b2nni5jh871giq9109qgfc5t6.apps.googleusercontent.com',
     
     // API Key (optional, for public data access)
-    API_KEY: process.env.GMAIL_API_KEY || null,
+    API_KEY: null,
     
     // Discovery docs for Gmail API
     DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'],
