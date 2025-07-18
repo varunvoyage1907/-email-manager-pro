@@ -13,18 +13,86 @@ class EmailManager {
         this.aiAutoReplyEnabled = true;
         this.gmailMode = false; // Track if using Gmail or sample data
         this.sampleEmails = []; // Store sample emails separately
+        this.initialized = false;
         
-        this.init();
+        // Ensure initialization happens after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     init() {
-        this.generateSampleData();
+        try {
+            console.log('Initializing Email Manager...');
+            this.generateSampleData();
+            console.log('Sample data generated:', this.emails.length, 'emails');
+            this.bindEvents();
+            this.renderEmails();
+            this.updateFilterCounts();
+            
+            // Store sample emails separately for switching modes
+            this.sampleEmails = [...this.emails];
+            this.initialized = true;
+            console.log('Email Manager initialized successfully');
+        } catch (error) {
+            console.error('Error initializing Email Manager:', error);
+            // Fallback initialization
+            this.fallbackInit();
+        }
+    }
+
+    fallbackInit() {
+        console.log('Using fallback initialization...');
+        this.emails = [];
+        this.generateMinimalSampleData();
         this.bindEvents();
         this.renderEmails();
         this.updateFilterCounts();
-        
-        // Store sample emails separately for switching modes
-        this.sampleEmails = [...this.emails];
+        this.initialized = true;
+    }
+
+    generateMinimalSampleData() {
+        // Minimal sample data as fallback
+        const customers = [
+            { id: 1, name: 'Sarah Johnson', email: 'sarah.j@example.com', joinDate: '2023-01-15' },
+            { id: 2, name: 'Mike Chen', email: 'mike.chen@example.com', joinDate: '2023-02-20' }
+        ];
+
+        customers.forEach(customer => {
+            this.customers.set(customer.id, {
+                ...customer,
+                interactions: []
+            });
+        });
+
+        this.emails = [
+            {
+                id: 1,
+                customerId: 1,
+                subject: 'Order Delayed - When will it arrive?',
+                content: `Hi there,\n\nI placed an order (#12345) last week and it was supposed to arrive yesterday, but I haven't received it yet. Can you please check the status and let me know when I can expect delivery?\n\nThank you!`,
+                timestamp: new Date(Date.now() - 1000 * 60 * 30),
+                status: 'unread',
+                category: 'shipping',
+                priority: 'high',
+                tags: ['pending'],
+                thread: []
+            },
+            {
+                id: 2,
+                customerId: 2,
+                subject: 'Billing Question - Duplicate Charge',
+                content: `Hello,\n\nI noticed there are two charges on my credit card for the same order. Can you please help me understand why I was charged twice?\n\nThanks for your help.`,
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+                status: 'ai-replied',
+                category: 'billing',
+                priority: 'medium',
+                tags: ['ai-replied'],
+                thread: []
+            }
+        ];
     }
 
     generateSampleData() {
@@ -900,8 +968,14 @@ class EmailManager {
 // Initialize the application
 let emailManager;
 
-document.addEventListener('DOMContentLoaded', () => {
-    emailManager = new EmailManager();
+// Initialize when DOM is ready or immediately if already ready
+function initializeApp() {
+    if (!window.emailManager) {
+        console.log('Creating Email Manager instance...');
+        window.emailManager = emailManager = new EmailManager();
+    } else {
+        emailManager = window.emailManager;
+    }
     
     // Add some additional CSS for notifications
     const style = document.createElement('style');
@@ -1024,4 +1098,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
-}); 
+}
+
+// Initialize when ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+} 
