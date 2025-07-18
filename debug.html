@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Manager Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Email Manager Debug Page</h1>
+    
+    <div id="domCheck" class="debug-section">
+        <h3>DOM Elements Check</h3>
+        <div id="domResults">Checking...</div>
+    </div>
+    
+    <div id="scriptCheck" class="debug-section">
+        <h3>Script Loading Check</h3>
+        <div id="scriptResults">Checking...</div>
+    </div>
+    
+    <div id="dataCheck" class="debug-section">
+        <h3>Sample Data Check</h3>
+        <div id="dataResults">Checking...</div>
+    </div>
+    
+    <div id="errorCheck" class="debug-section">
+        <h3>JavaScript Errors</h3>
+        <div id="errorResults">No errors detected yet</div>
+    </div>
+
+    <script>
+        // Capture console logs and errors
+        const errors = [];
+        const logs = [];
+        
+        const originalError = console.error;
+        console.error = function(...args) {
+            errors.push(args.join(' '));
+            originalError.apply(console, args);
+            updateErrorDisplay();
+        };
+        
+        const originalLog = console.log;
+        console.log = function(...args) {
+            logs.push(args.join(' '));
+            originalLog.apply(console, args);
+        };
+        
+        function updateErrorDisplay() {
+            const errorDiv = document.getElementById('errorResults');
+            if (errors.length > 0) {
+                errorDiv.className = 'error';
+                errorDiv.innerHTML = '<pre>' + errors.join('\n') + '</pre>';
+            }
+        }
+        
+        function checkDOM() {
+            const elements = [
+                'emailList',
+                'searchInput',
+                'emailPreview'
+            ];
+            
+            const results = elements.map(id => {
+                const el = document.getElementById(id);
+                return `${id}: ${el ? '✅ Found' : '❌ Missing'}`;
+            });
+            
+            const domDiv = document.getElementById('domResults');
+            domDiv.innerHTML = '<pre>' + results.join('\n') + '</pre>';
+            domDiv.className = results.every(r => r.includes('✅')) ? 'success' : 'error';
+        }
+        
+        function checkScripts() {
+            const checks = [
+                { name: 'EmailManager Class', check: () => typeof EmailManager !== 'undefined' },
+                { name: 'window.emailManager', check: () => typeof window.emailManager !== 'undefined' },
+                { name: 'Gmail Config', check: () => typeof window.GMAIL_CONFIG !== 'undefined' }
+            ];
+            
+            const results = checks.map(({name, check}) => {
+                try {
+                    return `${name}: ${check() ? '✅ Available' : '❌ Missing'}`;
+                } catch (e) {
+                    return `${name}: ❌ Error - ${e.message}`;
+                }
+            });
+            
+            const scriptDiv = document.getElementById('scriptResults');
+            scriptDiv.innerHTML = '<pre>' + results.join('\n') + '</pre>';
+        }
+        
+        function checkData() {
+            try {
+                if (window.emailManager && window.emailManager.emails) {
+                    const emails = window.emailManager.emails;
+                    const dataDiv = document.getElementById('dataResults');
+                    dataDiv.className = 'success';
+                    dataDiv.innerHTML = `
+                        <p>✅ EmailManager found with ${emails.length} emails</p>
+                        <p>Sample emails:</p>
+                        <pre>${emails.slice(0, 3).map(e => `- ${e.subject} (${e.status})`).join('\n')}</pre>
+                        <p>Logs (last 10):</p>
+                        <pre>${logs.slice(-10).join('\n')}</pre>
+                    `;
+                } else {
+                    const dataDiv = document.getElementById('dataResults');
+                    dataDiv.className = 'error';
+                    dataDiv.innerHTML = '❌ EmailManager or emails not found';
+                }
+            } catch (e) {
+                const dataDiv = document.getElementById('dataResults');
+                dataDiv.className = 'error';
+                dataDiv.innerHTML = `❌ Error accessing data: ${e.message}`;
+            }
+        }
+        
+        // Run checks
+        setTimeout(() => {
+            checkDOM();
+            checkScripts();
+            setTimeout(checkData, 2000); // Wait a bit for initialization
+        }, 1000);
+        
+        // Recheck every 3 seconds
+        setInterval(() => {
+            checkData();
+        }, 3000);
+    </script>
+    
+    <!-- Load the main script -->
+    <script src="script.js"></script>
+</body>
+</html> 
