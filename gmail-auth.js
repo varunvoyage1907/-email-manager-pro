@@ -152,7 +152,7 @@ class GmailAuth {
     }
 
     updateHeaderForSignedIn(name, email, imageUrl) {
-        const headerRight = document.querySelector('.header-right');
+        const headerRight = document.querySelector('.nav-right');
         
         // Remove existing Gmail auth button
         const existingBtn = document.getElementById('gmailAuthBtn');
@@ -186,7 +186,7 @@ class GmailAuth {
     }
 
     updateHeaderForSignedOut() {
-        const headerRight = document.querySelector('.header-right');
+        const headerRight = document.querySelector('.nav-right');
         
         // Remove user profile if exists
         const userProfile = document.querySelector('.user-profile');
