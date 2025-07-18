@@ -26,45 +26,126 @@ class EmailManager {
     init() {
         console.log('Initializing Email Manager...');
         
-        // Always start with sample data mode for reliable display
+        // Always start with sample data mode for reliable display on Vercel
         this.gmailMode = false;
+        this.forceMode = 'sample'; // Force sample mode to avoid Google API issues
         
         try {
+            console.log('Generating sample data (forced mode for Vercel compatibility)...');
             this.generateSampleData();
             console.log('Sample data generated:', this.emails.length, 'emails');
             
-            // Force a minimal delay to ensure DOM is ready
-            setTimeout(() => {
-                try {
-                    this.bindEvents();
-                    this.renderEmails();
-                    this.updateFilterCounts();
-                    
-                    // Store sample emails separately for switching modes
-                    this.sampleEmails = [...this.emails];
-                    this.initialized = true;
-                    console.log('Email Manager initialized successfully with', this.emails.length, 'sample emails');
-                } catch (renderError) {
-                    console.error('Error during rendering:', renderError);
-                    this.fallbackInit();
-                }
-            }, 100);
+            // Use requestAnimationFrame for better timing on Vercel
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    try {
+                        console.log('Binding events...');
+                        this.bindEvents();
+                        console.log('Rendering emails...');
+                        this.renderEmails();
+                        console.log('Updating filter counts...');
+                        this.updateFilterCounts();
+                        
+                        // Store sample emails separately for switching modes
+                        this.sampleEmails = [...this.emails];
+                        this.initialized = true;
+                        console.log('✅ Email Manager initialized successfully with', this.emails.length, 'sample emails');
+                        
+                        // Show success indicator
+                        this.showInitializationSuccess();
+                        
+                    } catch (renderError) {
+                        console.error('Error during rendering:', renderError);
+                        this.emergencyFallback();
+                    }
+                });
+            });
             
         } catch (error) {
             console.error('Error initializing Email Manager:', error);
-            // Fallback initialization
-            setTimeout(() => this.fallbackInit(), 100);
+            // Emergency fallback
+            this.emergencyFallback();
         }
     }
 
-    fallbackInit() {
-        console.log('Using fallback initialization...');
-        this.emails = [];
-        this.generateMinimalSampleData();
-        this.bindEvents();
-        this.renderEmails();
-        this.updateFilterCounts();
-        this.initialized = true;
+    emergencyFallback() {
+        console.log('🚨 Using emergency fallback initialization...');
+        
+        // Create minimal but working email list
+        this.emails = [
+            {
+                id: 1,
+                customerId: 1,
+                subject: 'Welcome to Email Manager Pro',
+                content: 'Your email management system is now active with sample data.',
+                timestamp: new Date(),
+                status: 'unread',
+                category: 'general',
+                priority: 'high',
+                tags: ['pending'],
+                thread: []
+            }
+        ];
+        
+        this.customers.set(1, {
+            id: 1,
+            name: 'Demo Customer',
+            email: 'demo@example.com',
+            joinDate: '2023-01-01',
+            interactions: []
+        });
+        
+        // Try to render with minimal delay
+        setTimeout(() => {
+            try {
+                this.bindEvents();
+                this.renderEmails();
+                this.updateFilterCounts();
+                this.initialized = true;
+                console.log('✅ Emergency fallback successful');
+            } catch (e) {
+                console.error('Emergency fallback failed:', e);
+                this.showErrorMessage();
+            }
+        }, 100);
+    }
+
+    showInitializationSuccess() {
+        // Add success indicator to the UI
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 10000;
+            font-size: 14px;
+        `;
+        indicator.textContent = `✅ ${this.emails.length} emails loaded`;
+        document.body.appendChild(indicator);
+        
+        setTimeout(() => {
+            indicator.remove();
+        }, 3000);
+    }
+
+    showErrorMessage() {
+        const emailList = document.getElementById('emailList');
+        if (emailList) {
+            emailList.innerHTML = `
+                <div style="padding: 40px; text-align: center; color: #666;">
+                    <h3>⚠️ Initialization Error</h3>
+                    <p>There was an issue loading the email manager.</p>
+                    <p>Please refresh the page or check the debug page.</p>
+                    <button onclick="window.location.reload()" style="padding: 10px 20px; margin-top: 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Refresh Page
+                    </button>
+                </div>
+            `;
+        }
     }
 
     generateMinimalSampleData() {

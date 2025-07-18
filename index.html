@@ -212,8 +212,14 @@
     
     <!-- Gmail API Scripts - Load Async (Optional for sample data mode) -->
     <script>
-        // Load Gmail API scripts asynchronously
+        // Load Gmail API scripts asynchronously (optional for Vercel production)
         function loadGmailAPI() {
+            // Skip Gmail API loading in production for better Vercel compatibility
+            if (window.location.hostname.includes('vercel.app')) {
+                console.log('🚀 Production mode: Using sample data only for better Vercel compatibility');
+                return;
+            }
+            
             try {
                 // Load Google API
                 const script1 = document.createElement('script');
@@ -248,8 +254,10 @@
             }
         }
         
-        // Start loading Gmail API after a delay to ensure core app loads first
-        setTimeout(loadGmailAPI, 1000);
+        // Only load Gmail API for local development
+        if (!window.location.hostname.includes('vercel.app')) {
+            setTimeout(loadGmailAPI, 2000);
+        }
     </script>
 </body>
 </html> 
