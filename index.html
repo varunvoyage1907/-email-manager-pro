@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Manager Pro - AI-Powered Customer Support</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Gmail API Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="config.js"></script>
+    <script src="gmail-auth.js"></script>
+    <script src="gmail-api.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="app-title">
+                    <i class="fas fa-envelope"></i>
+                    Email Manager Pro
+                </h1>
+            </div>
+            <div class="header-center">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search emails..." class="search-input" id="searchInput">
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="header-btn" id="profileBtn">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Filters</h3>
+                    <ul class="filter-list">
+                        <li class="filter-item active" data-filter="all">
+                            <i class="fas fa-inbox"></i>
+                            <span>All Emails</span>
+                            <span class="count">24</span>
+                        </li>
+                        <li class="filter-item" data-filter="unread">
+                            <i class="fas fa-envelope"></i>
+                            <span>Unread</span>
+                            <span class="count">8</span>
+                        </li>
+                        <li class="filter-item" data-filter="ai-replied">
+                            <i class="fas fa-robot ai-icon"></i>
+                            <span>AI Replied</span>
+                            <span class="count">12</span>
+                        </li>
+                        <li class="filter-item" data-filter="pending">
+                            <i class="fas fa-clock"></i>
+                            <span>Pending</span>
+                            <span class="count">4</span>
+                        </li>
+                        <li class="filter-item" data-filter="resolved">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Resolved</span>
+                            <span class="count">16</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Categories</h3>
+                    <ul class="category-list">
+                        <li class="category-item" data-category="general">
+                            <span class="category-dot general"></span>
+                            <span>General Inquiry</span>
+                        </li>
+                        <li class="category-item" data-category="billing">
+                            <span class="category-dot billing"></span>
+                            <span>Billing</span>
+                        </li>
+                        <li class="category-item" data-category="technical">
+                            <span class="category-dot technical"></span>
+                            <span>Technical Support</span>
+                        </li>
+                        <li class="category-item" data-category="returns">
+                            <span class="category-dot returns"></span>
+                            <span>Returns & Refunds</span>
+                        </li>
+                        <li class="category-item" data-category="shipping">
+                            <span class="category-dot shipping"></span>
+                            <span>Shipping</span>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Email List -->
+            <div class="email-list-container">
+                <div class="email-list-header">
+                    <div class="list-controls">
+                        <button class="control-btn" id="selectAllBtn">
+                            <i class="fas fa-check-square"></i>
+                        </button>
+                        <button class="control-btn" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="control-btn" id="sortBtn">
+                            <i class="fas fa-sort"></i>
+                        </button>
+                    </div>
+                    <div class="ai-status">
+                        <span class="ai-indicator active">
+                            <i class="fas fa-robot"></i>
+                            AI Auto-Reply: ON
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="email-list" id="emailList">
+                    <!-- Email items will be dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Email Preview -->
+            <div class="email-preview-container">
+                <div class="email-preview" id="emailPreview">
+                    <div class="preview-placeholder">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <h3>Select an email to preview</h3>
+                        <p>Choose an email from the list to view its contents and manage responses.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Reply Modal -->
+        <div class="modal" id="aiReplyModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-robot ai-icon"></i>
+                        AI-Generated Reply
+                    </h3>
+                    <button class="close-btn" id="closeModalBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="ai-reply-content">
+                        <textarea id="aiReplyText" placeholder="AI will generate a response based on the email content..."></textarea>
+                    </div>
+                    <div class="ai-confidence">
+                        <span class="confidence-label">Confidence Level:</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                        </div>
+                        <span class="confidence-value" id="confidenceValue">85%</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="regenerateBtn">
+                        <i class="fas fa-redo"></i>
+                        Regenerate
+                    </button>
+                    <button class="btn btn-secondary" id="editReplyBtn">
+                        <i class="fas fa-edit"></i>
+                        Edit Reply
+                    </button>
+                    <button class="btn btn-primary" id="sendReplyBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        Send Reply
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer History Modal -->
+        <div class="modal" id="customerHistoryModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-history"></i>
+                        Customer History
+                    </h3>
+                    <button class="close-btn" id="closeHistoryModalBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="customer-info">
+                        <div class="customer-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="customer-details">
+                            <h4 id="customerName">Customer Name</h4>
+                            <p id="customerEmail">customer@example.com</p>
+                            <p id="customerJoined">Customer since: Jan 2023</p>
+                        </div>
+                    </div>
+                    <div class="interaction-history" id="interactionHistory">
+                        <!-- History items will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
