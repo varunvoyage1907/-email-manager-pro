@@ -7,12 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- Gmail API Scripts -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="config.js"></script>
-    <script src="gmail-auth.js"></script>
-    <script src="gmail-api.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -213,6 +207,49 @@
         </div>
     </div>
 
+    <!-- Core Application Script - Load First -->
     <script src="script.js"></script>
+    
+    <!-- Gmail API Scripts - Load Async (Optional for sample data mode) -->
+    <script>
+        // Load Gmail API scripts asynchronously
+        function loadGmailAPI() {
+            try {
+                // Load Google API
+                const script1 = document.createElement('script');
+                script1.src = 'https://apis.google.com/js/api.js';
+                script1.async = true;
+                script1.onerror = () => console.log('Gmail API script failed to load - continuing with sample data');
+                document.head.appendChild(script1);
+                
+                // Load config
+                const script2 = document.createElement('script');
+                script2.src = 'config.js';
+                script2.async = true;
+                script2.onerror = () => console.log('Config script failed to load - continuing with sample data');
+                document.head.appendChild(script2);
+                
+                // Load auth
+                const script3 = document.createElement('script');
+                script3.src = 'gmail-auth.js';
+                script3.async = true;
+                script3.onerror = () => console.log('Gmail auth script failed to load - continuing with sample data');
+                document.head.appendChild(script3);
+                
+                // Load Gmail API
+                const script4 = document.createElement('script');
+                script4.src = 'gmail-api.js';
+                script4.async = true;
+                script4.onerror = () => console.log('Gmail API script failed to load - continuing with sample data');
+                document.head.appendChild(script4);
+                
+            } catch (error) {
+                console.log('Gmail API loading failed - continuing with sample data:', error);
+            }
+        }
+        
+        // Start loading Gmail API after a delay to ensure core app loads first
+        setTimeout(loadGmailAPI, 1000);
+    </script>
 </body>
 </html> 

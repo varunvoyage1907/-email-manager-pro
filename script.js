@@ -24,22 +24,36 @@ class EmailManager {
     }
 
     init() {
+        console.log('Initializing Email Manager...');
+        
+        // Always start with sample data mode for reliable display
+        this.gmailMode = false;
+        
         try {
-            console.log('Initializing Email Manager...');
             this.generateSampleData();
             console.log('Sample data generated:', this.emails.length, 'emails');
-            this.bindEvents();
-            this.renderEmails();
-            this.updateFilterCounts();
             
-            // Store sample emails separately for switching modes
-            this.sampleEmails = [...this.emails];
-            this.initialized = true;
-            console.log('Email Manager initialized successfully');
+            // Force a minimal delay to ensure DOM is ready
+            setTimeout(() => {
+                try {
+                    this.bindEvents();
+                    this.renderEmails();
+                    this.updateFilterCounts();
+                    
+                    // Store sample emails separately for switching modes
+                    this.sampleEmails = [...this.emails];
+                    this.initialized = true;
+                    console.log('Email Manager initialized successfully with', this.emails.length, 'sample emails');
+                } catch (renderError) {
+                    console.error('Error during rendering:', renderError);
+                    this.fallbackInit();
+                }
+            }, 100);
+            
         } catch (error) {
             console.error('Error initializing Email Manager:', error);
             // Fallback initialization
-            this.fallbackInit();
+            setTimeout(() => this.fallbackInit(), 100);
         }
     }
 
@@ -267,8 +281,16 @@ class EmailManager {
     }
 
     bindEvents() {
+        // Check if essential DOM elements exist
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) {
+            console.log('Search input element not found, retrying bindEvents in 500ms...');
+            setTimeout(() => this.bindEvents(), 500);
+            return;
+        }
+        
         // Search functionality
-        document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchInput.addEventListener('input', (e) => {
             this.filters.search = e.target.value.toLowerCase();
             this.renderEmails();
         });
@@ -346,6 +368,12 @@ class EmailManager {
 
     renderEmails() {
         const emailList = document.getElementById('emailList');
+        if (!emailList) {
+            console.log('Email list element not found, retrying in 500ms...');
+            setTimeout(() => this.renderEmails(), 500);
+            return;
+        }
+        
         const filteredEmails = this.getFilteredEmails();
         
         if (filteredEmails.length === 0) {
