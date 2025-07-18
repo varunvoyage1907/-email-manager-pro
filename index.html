@@ -3,261 +3,292 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Manager Pro - AI-Powered Customer Support</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Email Manager Pro - Professional Customer Support Platform</title>
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📧</text></svg>">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <h1 class="app-title">
-                    <i class="fas fa-envelope"></i>
-                    Email Manager Pro
-                </h1>
-            </div>
-            <div class="header-center">
-                <div class="search-container">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search emails..." class="search-input" id="searchInput">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Email Manager Pro</h2>
+            <p>Loading your professional customer support platform...</p>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appContainer" class="app-container hidden">
+        <!-- Top Navigation Bar -->
+        <nav class="top-nav">
+            <div class="nav-left">
+                <div class="logo">
+                    <i class="fas fa-envelope-open-text"></i>
+                    <span>Email Manager Pro</span>
                 </div>
             </div>
-            <div class="header-right">
-                <button class="header-btn" id="settingsBtn">
+            
+            <div class="nav-center">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="globalSearch" placeholder="Search emails, customers, or content..." autocomplete="off">
+                    <button class="search-clear" id="clearSearch" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="nav-right">
+                <button class="nav-btn" id="settingsBtn" title="Settings">
                     <i class="fas fa-cog"></i>
                 </button>
-                <button class="header-btn" id="profileBtn">
-                    <i class="fas fa-user"></i>
+                <button class="nav-btn" id="profileBtn" title="Profile">
+                    <i class="fas fa-user-circle"></i>
                 </button>
+                <div class="status-indicator online" title="System Online">
+                    <i class="fas fa-circle"></i>
+                </div>
             </div>
-        </header>
+        </nav>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Sidebar -->
+        <!-- Main Content Area -->
+        <div class="main-layout">
+            <!-- Left Sidebar -->
             <aside class="sidebar">
-                <div class="sidebar-section">
-                    <h3>Filters</h3>
+                <!-- Quick Stats -->
+                <div class="stats-section">
+                    <h3>Dashboard</h3>
+                    <div class="stat-cards">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalEmails">0</div>
+                                <div class="stat-label">Total Emails</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon ai">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="aiReplies">0</div>
+                                <div class="stat-label">AI Replies</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Filters -->
+                <div class="filter-section">
+                    <h3>Email Filters</h3>
                     <ul class="filter-list">
                         <li class="filter-item active" data-filter="all">
                             <i class="fas fa-inbox"></i>
                             <span>All Emails</span>
-                            <span class="count">24</span>
+                            <span class="count" id="countAll">0</span>
                         </li>
                         <li class="filter-item" data-filter="unread">
                             <i class="fas fa-envelope"></i>
                             <span>Unread</span>
-                            <span class="count">8</span>
+                            <span class="count unread" id="countUnread">0</span>
                         </li>
                         <li class="filter-item" data-filter="ai-replied">
-                            <i class="fas fa-robot ai-icon"></i>
-                            <span>AI Replied</span>
-                            <span class="count">12</span>
+                            <i class="fas fa-robot"></i>
+                            <span>AI Handled</span>
+                            <span class="count ai" id="countAI">0</span>
                         </li>
-                        <li class="filter-item" data-filter="pending">
-                            <i class="fas fa-clock"></i>
-                            <span>Pending</span>
-                            <span class="count">4</span>
+                        <li class="filter-item" data-filter="urgent">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Urgent</span>
+                            <span class="count urgent" id="countUrgent">0</span>
                         </li>
                         <li class="filter-item" data-filter="resolved">
                             <i class="fas fa-check-circle"></i>
                             <span>Resolved</span>
-                            <span class="count">16</span>
+                            <span class="count resolved" id="countResolved">0</span>
                         </li>
                     </ul>
                 </div>
-                
-                <div class="sidebar-section">
+
+                <!-- Categories -->
+                <div class="categories-section">
                     <h3>Categories</h3>
                     <ul class="category-list">
-                        <li class="category-item" data-category="general">
-                            <span class="category-dot general"></span>
-                            <span>General Inquiry</span>
+                        <li class="category-item" data-category="support">
+                            <span class="category-dot support"></span>
+                            <span>Technical Support</span>
                         </li>
                         <li class="category-item" data-category="billing">
                             <span class="category-dot billing"></span>
-                            <span>Billing</span>
+                            <span>Billing & Payments</span>
                         </li>
-                        <li class="category-item" data-category="technical">
-                            <span class="category-dot technical"></span>
-                            <span>Technical Support</span>
+                        <li class="category-item" data-category="sales">
+                            <span class="category-dot sales"></span>
+                            <span>Sales Inquiry</span>
                         </li>
                         <li class="category-item" data-category="returns">
                             <span class="category-dot returns"></span>
                             <span>Returns & Refunds</span>
                         </li>
-                        <li class="category-item" data-category="shipping">
-                            <span class="category-dot shipping"></span>
-                            <span>Shipping</span>
+                        <li class="category-item" data-category="general">
+                            <span class="category-dot general"></span>
+                            <span>General Inquiry</span>
                         </li>
                     </ul>
                 </div>
-            </aside>
 
-            <!-- Email List -->
-            <div class="email-list-container">
-                <div class="email-list-header">
-                    <div class="list-controls">
-                        <button class="control-btn" id="selectAllBtn">
-                            <i class="fas fa-check-square"></i>
-                        </button>
-                        <button class="control-btn" id="refreshBtn">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                        <button class="control-btn" id="sortBtn">
-                            <i class="fas fa-sort"></i>
-                        </button>
-                    </div>
-                    <div class="ai-status">
-                        <span class="ai-indicator active">
-                            <i class="fas fa-robot"></i>
-                            AI Auto-Reply: ON
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="email-list" id="emailList">
-                    <!-- Email items will be dynamically populated -->
-                </div>
-            </div>
-
-            <!-- Email Preview -->
-            <div class="email-preview-container">
-                <div class="email-preview" id="emailPreview">
-                    <div class="preview-placeholder">
-                        <i class="fas fa-envelope-open-text"></i>
-                        <h3>Select an email to preview</h3>
-                        <p>Choose an email from the list to view its contents and manage responses.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Reply Modal -->
-        <div class="modal" id="aiReplyModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>
-                        <i class="fas fa-robot ai-icon"></i>
-                        AI-Generated Reply
-                    </h3>
-                    <button class="close-btn" id="closeModalBtn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="ai-reply-content">
-                        <textarea id="aiReplyText" placeholder="AI will generate a response based on the email content..."></textarea>
+                <!-- AI Controls -->
+                <div class="ai-section">
+                    <h3>AI Assistant</h3>
+                    <div class="ai-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="aiAutoReply" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">Auto-Reply Enabled</span>
                     </div>
                     <div class="ai-confidence">
-                        <span class="confidence-label">Confidence Level:</span>
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" id="confidenceFill"></div>
-                        </div>
-                        <span class="confidence-value" id="confidenceValue">85%</span>
+                        <span>Confidence Threshold</span>
+                        <input type="range" id="confidenceSlider" min="60" max="95" value="80">
+                        <span id="confidenceValue">80%</span>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" id="regenerateBtn">
-                        <i class="fas fa-redo"></i>
-                        Regenerate
-                    </button>
-                    <button class="btn btn-secondary" id="editReplyBtn">
-                        <i class="fas fa-edit"></i>
-                        Edit Reply
-                    </button>
-                    <button class="btn btn-primary" id="sendReplyBtn">
-                        <i class="fas fa-paper-plane"></i>
-                        Send Reply
-                    </button>
+            </aside>
+
+            <!-- Email List Panel -->
+            <div class="email-panel">
+                <div class="panel-header">
+                    <div class="header-left">
+                        <h2 id="panelTitle">All Emails</h2>
+                        <span class="email-count" id="visibleCount">0 emails</span>
+                    </div>
+                    <div class="header-controls">
+                        <button class="control-btn" id="refreshBtn" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="control-btn" id="selectAllBtn" title="Select All">
+                            <i class="fas fa-check-square"></i>
+                        </button>
+                        <div class="sort-dropdown">
+                            <button class="control-btn" id="sortBtn" title="Sort">
+                                <i class="fas fa-sort"></i>
+                            </button>
+                            <div class="sort-menu" id="sortMenu">
+                                <div class="sort-option active" data-sort="newest">Newest First</div>
+                                <div class="sort-option" data-sort="oldest">Oldest First</div>
+                                <div class="sort-option" data-sort="priority">Priority</div>
+                                <div class="sort-option" data-sort="sender">Sender Name</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="email-list-container">
+                    <div id="emailList" class="email-list">
+                        <!-- Email items will be populated here -->
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Customer History Modal -->
-        <div class="modal" id="customerHistoryModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>
-                        <i class="fas fa-history"></i>
-                        Customer History
-                    </h3>
-                    <button class="close-btn" id="closeHistoryModalBtn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="customer-info">
-                        <div class="customer-avatar">
-                            <i class="fas fa-user"></i>
+            <!-- Email Detail Panel -->
+            <div class="detail-panel">
+                <div id="emailDetail" class="email-detail">
+                    <div class="detail-placeholder">
+                        <div class="placeholder-icon">
+                            <i class="fas fa-envelope-open-text"></i>
                         </div>
-                        <div class="customer-details">
-                            <h4 id="customerName">Customer Name</h4>
-                            <p id="customerEmail">customer@example.com</p>
-                            <p id="customerJoined">Customer since: Jan 2023</p>
-                        </div>
-                    </div>
-                    <div class="interaction-history" id="interactionHistory">
-                        <!-- History items will be populated dynamically -->
+                        <h3>Select an Email</h3>
+                        <p>Choose an email from the list to view details and manage responses.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Core Application Script - Load First -->
+    <!-- AI Reply Modal -->
+    <div id="aiModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-robot"></i>
+                    AI-Generated Response
+                </h3>
+                <button class="modal-close" id="closeAIModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="ai-response-area">
+                    <textarea id="aiResponseText" placeholder="AI response will appear here..."></textarea>
+                </div>
+                <div class="ai-metrics">
+                    <div class="confidence-meter">
+                        <span>Confidence Score</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="modalConfidenceFill"></div>
+                        </div>
+                        <span id="modalConfidenceText">85%</span>
+                    </div>
+                    <div class="response-time">
+                        <span>Generated in <span id="responseTime">1.2s</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="regenerateResponse">
+                    <i class="fas fa-redo"></i>
+                    Regenerate
+                </button>
+                <button class="btn btn-secondary" id="editResponse">
+                    <i class="fas fa-edit"></i>
+                    Edit
+                </button>
+                <button class="btn btn-primary" id="sendResponse">
+                    <i class="fas fa-paper-plane"></i>
+                    Send Reply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Profile Modal -->
+    <div id="customerModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-user"></i>
+                    Customer Profile
+                </h3>
+                <button class="modal-close" id="closeCustomerModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="customerProfile">
+                    <!-- Customer profile content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Core Application Script -->
     <script src="script.js"></script>
-    
-    <!-- Gmail API Scripts - Load Async (Optional for sample data mode) -->
-    <script>
-        // Load Gmail API scripts asynchronously (optional for Vercel production)
-        function loadGmailAPI() {
-            // Skip Gmail API loading in production for better Vercel compatibility
-            if (window.location.hostname.includes('vercel.app')) {
-                console.log('🚀 Production mode: Using sample data only for better Vercel compatibility');
-                return;
-            }
-            
-            try {
-                // Load Google API
-                const script1 = document.createElement('script');
-                script1.src = 'https://apis.google.com/js/api.js';
-                script1.async = true;
-                script1.onerror = () => console.log('Gmail API script failed to load - continuing with sample data');
-                document.head.appendChild(script1);
-                
-                // Load config
-                const script2 = document.createElement('script');
-                script2.src = 'config.js';
-                script2.async = true;
-                script2.onerror = () => console.log('Config script failed to load - continuing with sample data');
-                document.head.appendChild(script2);
-                
-                // Load auth
-                const script3 = document.createElement('script');
-                script3.src = 'gmail-auth.js';
-                script3.async = true;
-                script3.onerror = () => console.log('Gmail auth script failed to load - continuing with sample data');
-                document.head.appendChild(script3);
-                
-                // Load Gmail API
-                const script4 = document.createElement('script');
-                script4.src = 'gmail-api.js';
-                script4.async = true;
-                script4.onerror = () => console.log('Gmail API script failed to load - continuing with sample data');
-                document.head.appendChild(script4);
-                
-            } catch (error) {
-                console.log('Gmail API loading failed - continuing with sample data:', error);
-            }
-        }
-        
-        // Only load Gmail API for local development
-        if (!window.location.hostname.includes('vercel.app')) {
-            setTimeout(loadGmailAPI, 2000);
-        }
-    </script>
 </body>
 </html> 

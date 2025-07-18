@@ -1,1217 +1,1647 @@
-// Email Management System - Main JavaScript File
+/**
+ * ===============================================
+ * EMAIL MANAGER PRO - MODERN JAVASCRIPT APPLICATION
+ * Professional Customer Support Platform
+ * Version 2.0 - Optimized for Vercel Deployment
+ * ===============================================
+ */
 
-class EmailManager {
+'use strict';
+
+// Application State
+class EmailManagerPro {
     constructor() {
+        // Core properties
         this.emails = [];
         this.customers = new Map();
+        this.currentFilter = 'all';
+        this.currentCategory = null;
+        this.currentSort = 'newest';
+        this.searchQuery = '';
         this.selectedEmail = null;
-        this.filters = {
-            active: 'all',
-            category: null,
-            search: ''
-        };
-        this.aiAutoReplyEnabled = true;
-        this.gmailMode = false; // Track if using Gmail or sample data
-        this.sampleEmails = []; // Store sample emails separately
-        this.initialized = false;
+        this.isInitialized = false;
         
-        // Ensure initialization happens after DOM is ready
+        // UI state
+        this.sidebarOpen = false;
+        this.currentModal = null;
+        
+        // AI settings
+        this.aiEnabled = true;
+        this.confidenceThreshold = 80;
+        
+        // Performance optimizations
+        this.emailCache = new Map();
+        this.renderQueue = [];
+        this.lastRender = 0;
+        
+        // Initialize when DOM is ready
+        this.initializeWhenReady();
+    }
+
+    /**
+     * Initialize the application when DOM is ready
+     */
+    initializeWhenReady() {
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
+            document.addEventListener('DOMContentLoaded', () => this.initialize());
         } else {
-            this.init();
+            this.initialize();
         }
     }
 
-    init() {
-        console.log('Initializing Email Manager...');
-        
-        // Always start with sample data mode for reliable display on Vercel
-        this.gmailMode = false;
-        this.forceMode = 'sample'; // Force sample mode to avoid Google API issues
-        
+    /**
+     * Main initialization method
+     */
+    async initialize() {
         try {
-            console.log('Generating sample data (forced mode for Vercel compatibility)...');
-            this.generateSampleData();
-            console.log('Sample data generated:', this.emails.length, 'emails');
+            console.log('🚀 Initializing Email Manager Pro...');
             
-            // Use requestAnimationFrame for better timing on Vercel
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    try {
-                        console.log('Binding events...');
-                        this.bindEvents();
-                        console.log('Rendering emails...');
-                        this.renderEmails();
-                        console.log('Updating filter counts...');
-                        this.updateFilterCounts();
-                        
-                        // Store sample emails separately for switching modes
-                        this.sampleEmails = [...this.emails];
-                        this.initialized = true;
-                        console.log('✅ Email Manager initialized successfully with', this.emails.length, 'sample emails');
-                        
-                        // Show success indicator
-                        this.showInitializationSuccess();
-                        
-                    } catch (renderError) {
-                        console.error('Error during rendering:', renderError);
-                        this.emergencyFallback();
-                    }
-                });
-            });
+            // Show loading screen
+            this.showLoadingScreen();
+            
+            // Generate sample data
+            await this.generateSampleData();
+            console.log(`✅ Generated ${this.emails.length} sample emails`);
+            
+            // Initialize UI components
+            await this.initializeUI();
+            console.log('✅ UI components initialized');
+            
+            // Bind event listeners
+            this.bindEventListeners();
+            console.log('✅ Event listeners bound');
+            
+            // Initial render
+            this.renderAll();
+            console.log('✅ Initial render complete');
+            
+            // Hide loading screen and show app
+            this.hideLoadingScreen();
+            
+            // Show success notification
+            this.showNotification('success', 'Email Manager Pro', 'Successfully loaded with sample data');
+            
+            this.isInitialized = true;
+            console.log('🎉 Email Manager Pro initialized successfully!');
             
         } catch (error) {
-            console.error('Error initializing Email Manager:', error);
-            // Emergency fallback
-            this.emergencyFallback();
+            console.error('❌ Initialization failed:', error);
+            this.handleInitializationError(error);
         }
     }
 
-    emergencyFallback() {
-        console.log('🚨 Using emergency fallback initialization...');
-        
-        // Create minimal but working email list
-        this.emails = [
-            {
-                id: 1,
-                customerId: 1,
-                subject: 'Welcome to Email Manager Pro',
-                content: 'Your email management system is now active with sample data.',
-                timestamp: new Date(),
-                status: 'unread',
-                category: 'general',
-                priority: 'high',
-                tags: ['pending'],
-                thread: []
-            }
-        ];
-        
-        this.customers.set(1, {
-            id: 1,
-            name: 'Demo Customer',
-            email: 'demo@example.com',
-            joinDate: '2023-01-01',
-            interactions: []
-        });
-        
-        // Try to render with minimal delay
-        setTimeout(() => {
-            try {
-                this.bindEvents();
-                this.renderEmails();
-                this.updateFilterCounts();
-                this.initialized = true;
-                console.log('✅ Emergency fallback successful');
-            } catch (e) {
-                console.error('Emergency fallback failed:', e);
-                this.showErrorMessage();
-            }
-        }, 100);
+    /**
+     * Show loading screen
+     */
+    showLoadingScreen() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.classList.remove('fade-out');
+        }
     }
 
-    showInitializationSuccess() {
-        // Add success indicator to the UI
-        const indicator = document.createElement('div');
-        indicator.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #28a745;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            z-index: 10000;
-            font-size: 14px;
-        `;
-        indicator.textContent = `✅ ${this.emails.length} emails loaded`;
-        document.body.appendChild(indicator);
+    /**
+     * Hide loading screen and show main app
+     */
+    hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        const appContainer = document.getElementById('appContainer');
         
-        setTimeout(() => {
-            indicator.remove();
-        }, 3000);
+        if (loadingScreen && appContainer) {
+            setTimeout(() => {
+                loadingScreen.classList.add('fade-out');
+                appContainer.classList.remove('hidden');
+            }, 500);
+        }
     }
 
-    showErrorMessage() {
-        const emailList = document.getElementById('emailList');
-        if (emailList) {
-            emailList.innerHTML = `
-                <div style="padding: 40px; text-align: center; color: #666;">
-                    <h3>⚠️ Initialization Error</h3>
-                    <p>There was an issue loading the email manager.</p>
-                    <p>Please refresh the page or check the debug page.</p>
-                    <button onclick="window.location.reload()" style="padding: 10px 20px; margin-top: 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        Refresh Page
+    /**
+     * Handle initialization errors
+     */
+    handleInitializationError(error) {
+        console.error('Initialization error:', error);
+        
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.innerHTML = `
+                <div class="loading-content">
+                    <div style="color: #ef4444; font-size: 48px; margin-bottom: 24px;">⚠️</div>
+                    <h2 style="color: white;">Initialization Failed</h2>
+                    <p style="color: rgba(255,255,255,0.9); margin-bottom: 24px;">There was an error loading the application.</p>
+                    <button onclick="window.location.reload()" style="background: white; color: #2563eb; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Reload Application
                     </button>
                 </div>
             `;
         }
     }
 
-    generateMinimalSampleData() {
-        // Minimal sample data as fallback
-        const customers = [
-            { id: 1, name: 'Sarah Johnson', email: 'sarah.j@example.com', joinDate: '2023-01-15' },
-            { id: 2, name: 'Mike Chen', email: 'mike.chen@example.com', joinDate: '2023-02-20' }
-        ];
-
-        customers.forEach(customer => {
-            this.customers.set(customer.id, {
-                ...customer,
-                interactions: []
-            });
-        });
-
-        this.emails = [
-            {
-                id: 1,
-                customerId: 1,
-                subject: 'Order Delayed - When will it arrive?',
-                content: `Hi there,\n\nI placed an order (#12345) last week and it was supposed to arrive yesterday, but I haven't received it yet. Can you please check the status and let me know when I can expect delivery?\n\nThank you!`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 30),
-                status: 'unread',
-                category: 'shipping',
-                priority: 'high',
-                tags: ['pending'],
-                thread: []
-            },
-            {
-                id: 2,
-                customerId: 2,
-                subject: 'Billing Question - Duplicate Charge',
-                content: `Hello,\n\nI noticed there are two charges on my credit card for the same order. Can you please help me understand why I was charged twice?\n\nThanks for your help.`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-                status: 'ai-replied',
-                category: 'billing',
-                priority: 'medium',
-                tags: ['ai-replied'],
-                thread: []
-            }
-        ];
+    /**
+     * Generate comprehensive sample data
+     */
+    async generateSampleData() {
+        // Generate customers first
+        this.generateCustomers();
+        
+        // Generate realistic emails
+        this.generateEmails();
+        
+        // Add some processing delay for realism
+        await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    generateSampleData() {
-        // Sample customer data
+    /**
+     * Generate sample customers
+     */
+    generateCustomers() {
         const customers = [
-            { id: 1, name: 'Sarah Johnson', email: 'sarah.j@example.com', joinDate: '2023-01-15' },
-            { id: 2, name: 'Mike Chen', email: 'mike.chen@example.com', joinDate: '2023-02-20' },
-            { id: 3, name: 'Emily Rodriguez', email: 'emily.r@example.com', joinDate: '2023-03-10' },
-            { id: 4, name: 'David Kim', email: 'david.kim@example.com', joinDate: '2023-04-05' },
-            { id: 5, name: 'Lisa Thompson', email: 'lisa.t@example.com', joinDate: '2023-05-12' },
-            { id: 6, name: 'Alex Parker', email: 'alex.parker@example.com', joinDate: '2023-06-18' },
-            { id: 7, name: 'Jessica Wu', email: 'jessica.wu@example.com', joinDate: '2023-07-22' },
-            { id: 8, name: 'Robert Davis', email: 'robert.d@example.com', joinDate: '2023-08-14' }
-        ];
-
-        customers.forEach(customer => {
-            this.customers.set(customer.id, {
-                ...customer,
-                interactions: this.generateCustomerHistory(customer.id)
-            });
-        });
-
-        // Sample email data
-        this.emails = [
             {
                 id: 1,
-                customerId: 1,
-                subject: 'Order Delayed - When will it arrive?',
-                content: `Hi there,\n\nI placed an order (#12345) last week and it was supposed to arrive yesterday, but I haven't received it yet. Can you please check the status and let me know when I can expect delivery?\n\nThank you!`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-                status: 'unread',
-                category: 'shipping',
-                priority: 'high',
-                tags: ['pending'],
-                thread: []
+                name: 'Sarah Johnson',
+                email: 'sarah.johnson@techcorp.com',
+                company: 'TechCorp Solutions',
+                joinDate: '2023-01-15',
+                tier: 'premium',
+                avatar: 'SJ',
+                timezone: 'EST'
             },
             {
                 id: 2,
-                customerId: 2,
-                subject: 'Billing Question - Duplicate Charge',
-                content: `Hello,\n\nI noticed there are two charges on my credit card for the same order. One for $49.99 and another for $49.99. Can you please help me understand why I was charged twice?\n\nOrder number: #67890\n\nThanks for your help.`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-                status: 'ai-replied',
-                category: 'billing',
-                priority: 'medium',
-                tags: ['ai-replied'],
-                thread: [{
-                    type: 'ai-reply',
-                    content: 'Thank you for reaching out about the duplicate charge. I understand your concern and I\'m here to help resolve this quickly. I\'ve reviewed your account and can see the duplicate charges for order #67890. This appears to be a processing error on our end. I\'ve initiated a refund for the duplicate charge of $49.99, which should appear in your account within 3-5 business days. You\'ll receive an email confirmation shortly with the refund details.',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.5),
-                    confidence: 92
-                }]
+                name: 'Mike Chen',
+                email: 'mike.chen@startupdev.io',
+                company: 'StartupDev',
+                joinDate: '2023-02-20',
+                tier: 'business',
+                avatar: 'MC',
+                timezone: 'PST'
             },
             {
                 id: 3,
-                customerId: 3,
-                subject: 'Product Return Request',
-                content: `Hi,\n\nI'd like to return the wireless headphones I purchased last month. They're not working properly - the left ear piece has stopped working completely.\n\nThe order number is #11223 and I still have the original packaging.\n\nWhat's the return process?`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-                status: 'resolved',
-                category: 'returns',
-                priority: 'medium',
-                tags: ['resolved'],
-                thread: [{
-                    type: 'ai-reply',
-                    content: 'I\'m sorry to hear that your wireless headphones aren\'t working properly. I\'d be happy to help you with the return process. Since your order #11223 is within our 30-day return window and you have the original packaging, you\'re eligible for a full refund. I\'ve sent you a prepaid return shipping label to your email address. Once we receive the headphones, we\'ll process your refund within 3-5 business days.',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3.5),
-                    confidence: 88
-                }, {
-                    type: 'customer-reply',
-                    content: 'Perfect, thank you so much for the quick response and the prepaid label. I\'ll send them back today!',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-                }]
+                name: 'Emily Rodriguez',
+                email: 'emily.r@digitalagency.com',
+                company: 'Digital Agency Pro',
+                joinDate: '2023-03-10',
+                tier: 'enterprise',
+                avatar: 'ER',
+                timezone: 'CST'
             },
             {
                 id: 4,
-                customerId: 4,
-                subject: 'Technical Support - App Won\'t Load',
-                content: `Hello Support Team,\n\nI'm having trouble with your mobile app. Every time I try to open it, it crashes immediately. I've tried restarting my phone and reinstalling the app, but the problem persists.\n\nI'm using an iPhone 14 with iOS 17.1.\n\nCan you help me fix this?`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
-                status: 'unread',
-                category: 'technical',
-                priority: 'high',
-                tags: ['pending'],
-                thread: []
+                name: 'David Kim',
+                email: 'david.kim@freelancedesign.com',
+                company: 'Freelance Design Studio',
+                joinDate: '2023-04-05',
+                tier: 'standard',
+                avatar: 'DK',
+                timezone: 'PST'
             },
             {
                 id: 5,
-                customerId: 5,
-                subject: 'Product Recommendation Request',
-                content: `Hi,\n\nI'm looking for a laptop for my college student daughter. She'll be studying computer science, so it needs to handle programming and development work well.\n\nBudget is around $1200-1500. What would you recommend?\n\nThanks!`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-                status: 'ai-replied',
-                category: 'general',
-                priority: 'low',
-                tags: ['ai-replied'],
-                thread: [{
-                    type: 'ai-reply',
-                    content: 'Great question! For computer science studies, I\'d recommend looking at our MacBook Air M2 (starting at $1,299) or the Dell XPS 13 Plus (starting at $1,199). Both offer excellent performance for programming, long battery life for all-day use, and are lightweight for carrying around campus. The MacBook Air is particularly popular among CS students for its Unix-based system, while the Dell offers more flexibility with Windows/Linux development environments. Would you like detailed specs for either option?',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7.5),
-                    confidence: 85
-                }]
+                name: 'Lisa Thompson',
+                email: 'lisa.t@educationplus.org',
+                company: 'Education Plus',
+                joinDate: '2023-05-12',
+                tier: 'business',
+                avatar: 'LT',
+                timezone: 'EST'
             },
             {
                 id: 6,
-                customerId: 6,
-                subject: 'Account Access Issue',
-                content: `Hello,\n\nI can't log into my account. I keep getting an "invalid password" error even though I'm sure I'm using the correct password. I tried the password reset, but I'm not receiving the reset email.\n\nCan you help me regain access to my account?\n\nMy email is alex.parker@example.com`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-                status: 'unread',
-                category: 'technical',
-                priority: 'medium',
-                tags: ['pending'],
-                thread: []
+                name: 'Alex Parker',
+                email: 'alex.parker@healthtech.com',
+                company: 'HealthTech Innovations',
+                joinDate: '2023-06-18',
+                tier: 'premium',
+                avatar: 'AP',
+                timezone: 'MST'
             },
             {
                 id: 7,
-                customerId: 7,
-                subject: 'Praise for Excellent Service!',
-                content: `Hi team,\n\nI just wanted to reach out and say thank you for the amazing customer service I received last week. The representative who helped me with my order issue was incredibly patient and helpful.\n\nKeep up the great work!\n\nBest regards,\nJessica`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18), // 18 hours ago
-                status: 'resolved',
-                category: 'general',
-                priority: 'low',
-                tags: ['resolved'],
-                thread: []
+                name: 'Jessica Wu',
+                email: 'jessica.wu@retailsolutions.com',
+                company: 'Retail Solutions Inc',
+                joinDate: '2023-07-22',
+                tier: 'enterprise',
+                avatar: 'JW',
+                timezone: 'PST'
             },
             {
                 id: 8,
-                customerId: 8,
-                subject: 'Shipping Address Change',
-                content: `Hello,\n\nI need to change the shipping address for my recent order (#45678). I realized I accidentally used my old address.\n\nNew address:\n123 Oak Street\nAnytown, ST 12345\n\nThe order was placed this morning. Is it too late to make this change?\n\nThanks!`,
-                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-                status: 'ai-replied',
-                category: 'shipping',
-                priority: 'medium',
-                tags: ['ai-replied'],
-                thread: [{
-                    type: 'ai-reply',
-                    content: 'Thank you for contacting us about updating your shipping address for order #45678. Good news! Since your order was placed this morning and hasn\'t entered our fulfillment process yet, I was able to update the shipping address to 123 Oak Street, Anytown, ST 12345. You\'ll receive an updated order confirmation email shortly with the new address. Your order should still arrive within the originally estimated timeframe.',
-                    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 23),
-                    confidence: 94
-                }]
+                name: 'Robert Davis',
+                email: 'robert.d@financialservices.com',
+                company: 'Financial Services Group',
+                joinDate: '2023-08-14',
+                tier: 'premium',
+                avatar: 'RD',
+                timezone: 'EST'
             }
         ];
+
+        customers.forEach(customer => {
+            this.customers.set(customer.id, {
+                ...customer,
+                totalEmails: 0,
+                lastContact: null,
+                satisfaction: Math.floor(Math.random() * 30) + 70, // 70-100%
+                tags: this.generateCustomerTags(customer.tier)
+            });
+        });
     }
 
-    generateCustomerHistory(customerId) {
-        const interactions = [];
-        const numInteractions = Math.floor(Math.random() * 5) + 2;
+    /**
+     * Generate customer tags based on tier
+     */
+    generateCustomerTags(tier) {
+        const baseTags = ['active'];
+        const tierTags = {
+            standard: ['basic-support'],
+            business: ['priority-support', 'phone-support'],
+            premium: ['premium-support', 'dedicated-rep', 'priority-queue'],
+            enterprise: ['enterprise', 'dedicated-rep', 'sla-guaranteed', 'phone-support']
+        };
+        return [...baseTags, ...(tierTags[tier] || [])];
+    }
+
+    /**
+     * Generate realistic email conversations
+     */
+    generateEmails() {
+        const emailTemplates = [
+            {
+                customerId: 1,
+                subject: 'Critical Integration Issue - API Not Responding',
+                content: `Hi Support Team,
+
+We're experiencing a critical issue with our API integration. Our production system has been unable to connect to your API endpoints since this morning around 9:00 AM EST.
+
+Error details:
+- Endpoint: /api/v2/data/sync
+- Error: Connection timeout after 30 seconds
+- Frequency: Every API call is failing
+
+This is impacting our customer-facing services. Can you please prioritize this issue?
+
+Best regards,
+Sarah Johnson
+Lead Developer, TechCorp Solutions`,
+                category: 'support',
+                priority: 'high',
+                status: 'unread',
+                tags: ['urgent', 'api-issue'],
+                thread: [],
+                timestamp: new Date(Date.now() - 1000 * 60 * 45) // 45 minutes ago
+            },
+            {
+                customerId: 2,
+                subject: 'Billing Discrepancy - Double Charge This Month',
+                content: `Hello,
+
+I noticed there are two charges on my company credit card for this month's subscription:
+- Charge 1: $299.99 on March 1st
+- Charge 2: $299.99 on March 3rd
+
+We should only be charged once per month. Our subscription ID is SUB-789012.
+
+Could you please investigate and refund the duplicate charge?
+
+Thanks,
+Mike Chen
+StartupDev`,
+                category: 'billing',
+                priority: 'medium',
+                status: 'ai-replied',
+                tags: ['billing-issue', 'refund-requested'],
+                thread: [
+                    {
+                        type: 'ai-reply',
+                        author: 'AI Assistant',
+                        content: `Hi Mike,
+
+Thank you for reaching out about the billing discrepancy. I've reviewed your account and can confirm that there was indeed a duplicate charge due to a processing error on our end.
+
+Here's what I've done:
+✅ Initiated a refund for the duplicate charge ($299.99)
+✅ Added a credit note to your account
+✅ Flagged your account to prevent future duplicate charges
+
+The refund should appear in your account within 3-5 business days. You'll receive an email confirmation shortly with the refund details and reference number.
+
+I apologize for any inconvenience this may have caused.
+
+Best regards,
+AI Customer Support`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 30),
+                        confidence: 94
+                    }
+                ],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
+            },
+            {
+                customerId: 3,
+                subject: 'Feature Request: Advanced Analytics Dashboard',
+                content: `Hi Product Team,
+
+I'd like to request a new feature for our enterprise account. We need an advanced analytics dashboard that includes:
+
+1. Real-time data visualization
+2. Custom report generation
+3. Data export capabilities (CSV, PDF)
+4. User activity tracking
+5. Performance metrics over time
+
+Our team manages multiple client accounts and these analytics would help us provide better insights to our clients.
+
+Is this something that's on your roadmap? If so, what's the estimated timeline?
+
+Thank you,
+Emily Rodriguez
+Digital Agency Pro`,
+                category: 'sales',
+                priority: 'low',
+                status: 'ai-replied',
+                tags: ['feature-request', 'enterprise'],
+                thread: [
+                    {
+                        type: 'ai-reply',
+                        author: 'AI Assistant',
+                        content: `Hi Emily,
+
+Thank you for your detailed feature request! I'm excited to share that an advanced analytics dashboard is indeed on our product roadmap.
+
+Current status:
+📋 In development phase
+🎯 Beta release planned for Q2 2024
+🚀 General availability expected Q3 2024
+
+The features you mentioned align perfectly with what we're building:
+✅ Real-time data visualization
+✅ Custom report builder
+✅ Export capabilities (CSV, PDF, Excel)
+✅ User activity insights
+✅ Historical performance tracking
+
+As an enterprise customer, you'll have early access to the beta. I'll add you to our beta notification list and our product team will reach out when it's ready for testing.
+
+Would you like to schedule a call to discuss your specific analytics needs?
+
+Best regards,
+AI Product Assistant`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4),
+                        confidence: 87
+                    }
+                ],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5) // 5 hours ago
+            },
+            {
+                customerId: 4,
+                subject: 'Password Reset Not Working',
+                content: `Hi,
+
+I'm trying to reset my password but I'm not receiving the reset email. I've checked my spam folder and tried multiple times over the past hour.
+
+My email is: david.kim@freelancedesign.com
+Account ID: ACC-456789
+
+Can you please help me regain access to my account?
+
+Thanks,
+David Kim`,
+                category: 'support',
+                priority: 'medium',
+                status: 'unread',
+                tags: ['password-reset', 'access-issue'],
+                thread: [],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6) // 6 hours ago
+            },
+            {
+                customerId: 5,
+                subject: 'Upgrade to Business Plan - Education Discount',
+                content: `Hello Sales Team,
+
+We're currently on the Standard plan but need to upgrade to Business to support our growing team of 15 educators.
+
+As we're an educational organization (Education Plus), do you offer any educational discounts for the Business plan?
+
+Our current usage:
+- Monthly active users: 150 students
+- Data storage: 2.5GB
+- Monthly API calls: ~45,000
+
+Please let me know about available discounts and the upgrade process.
+
+Best regards,
+Lisa Thompson
+IT Director, Education Plus`,
+                category: 'sales',
+                priority: 'medium',
+                status: 'resolved',
+                tags: ['upgrade-request', 'education-discount'],
+                thread: [
+                    {
+                        type: 'human-reply',
+                        author: 'Sales Representative',
+                        content: `Hi Lisa,
+
+Great news! We absolutely offer educational discounts. For qualified educational institutions like yours, we provide a 25% discount on all our plans.
+
+Here's what your Business plan would cost:
+• Regular price: $49/month
+• Educational discount: $36.75/month
+• Annual payment: Additional 10% off = $33.08/month
+
+The Business plan includes:
+✅ Up to 500 monthly active users
+✅ 10GB storage
+✅ 100,000 monthly API calls
+✅ Priority support
+✅ Advanced reporting
+
+I'll send you the educational verification form and upgrade instructions shortly. Once verified, we can apply the discount and upgrade your account.
+
+Best regards,
+Jennifer Walsh
+Sales Representative`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 10),
+                        confidence: null
+                    },
+                    {
+                        type: 'customer-reply',
+                        author: 'Lisa Thompson',
+                        content: `Perfect! Thank you for the quick response and great pricing. I'll fill out the verification form today and get this upgrade processed.
+
+Looking forward to the enhanced features!
+
+Best,
+Lisa`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 9),
+                        confidence: null
+                    }
+                ],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12) // 12 hours ago
+            },
+            {
+                customerId: 6,
+                subject: 'Data Export Issues - Large Dataset',
+                content: `Support Team,
+
+I'm having trouble exporting our patient data (anonymized for HIPAA compliance). The export keeps timing out for datasets larger than 10,000 records.
+
+Our export requirements:
+- Dataset size: ~25,000 records
+- Format: CSV with custom field mapping
+- Frequency: Weekly automated exports
+
+Error message: "Export timeout - please try again with smaller dataset"
+
+This is critical for our compliance reporting. Can you please help resolve this?
+
+Dr. Alex Parker
+HealthTech Innovations`,
+                category: 'support',
+                priority: 'high',
+                status: 'urgent',
+                tags: ['data-export', 'hipaa', 'timeout'],
+                thread: [],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18) // 18 hours ago
+            },
+            {
+                customerId: 7,
+                subject: 'Integration Documentation Request',
+                content: `Hi Development Team,
+
+We're planning to integrate your platform with our inventory management system. Could you please provide:
+
+1. Complete API documentation
+2. Integration examples for retail systems
+3. Rate limiting information
+4. Webhook documentation for real-time updates
+
+Our tech stack: Node.js, PostgreSQL, Redis
+Expected volume: 500-1000 API calls per hour
+
+Timeline: We'd like to complete the integration within 3 weeks.
+
+Thanks,
+Jessica Wu
+CTO, Retail Solutions Inc`,
+                category: 'support',
+                priority: 'medium',
+                status: 'ai-replied',
+                tags: ['integration', 'documentation', 'api'],
+                thread: [
+                    {
+                        type: 'ai-reply',
+                        author: 'AI Technical Assistant',
+                        content: `Hi Jessica,
+
+I'd be happy to help with your integration! Here are the resources you requested:
+
+📚 **Documentation Links:**
+• Complete API Documentation: https://docs.ourplatform.com/api/v2
+• Integration Examples: https://docs.ourplatform.com/integrations/retail
+• Rate Limits: 1000 calls/hour (your volume is well within limits)
+• Webhook Guide: https://docs.ourplatform.com/webhooks
+
+🛠️ **Retail-Specific Resources:**
+• Node.js SDK: npm install @ourplatform/node-sdk
+• Sample retail integration: https://github.com/ourplatform/retail-examples
+• Inventory sync patterns: Real-time via webhooks + hourly batch sync
+
+📞 **Technical Support:**
+Given your 3-week timeline, I'd recommend scheduling a technical consultation call. Our integration specialists can provide personalized guidance for your specific use case.
+
+Would you like me to arrange a call this week?
+
+Best regards,
+AI Technical Support`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 22),
+                        confidence: 91
+                    }
+                ],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
+            },
+            {
+                customerId: 8,
+                subject: 'Security Compliance Audit - SOC 2 Documentation',
+                content: `Security Team,
+
+We're undergoing a financial services compliance audit and need documentation regarding your security practices:
+
+1. SOC 2 Type II certification
+2. Data encryption standards
+3. Access control policies
+4. Incident response procedures
+5. Data retention and deletion policies
+
+This is required for our annual compliance review. Can you provide these documents under NDA?
+
+Our compliance deadline is in 2 weeks.
+
+Robert Davis
+Chief Security Officer
+Financial Services Group`,
+                category: 'support',
+                priority: 'high',
+                status: 'resolved',
+                tags: ['compliance', 'security', 'soc2'],
+                thread: [
+                    {
+                        type: 'human-reply',
+                        author: 'Security Compliance Team',
+                        content: `Hi Robert,
+
+Thank you for reaching out regarding our security documentation. We understand the importance of compliance in the financial services sector.
+
+I've prepared a comprehensive compliance package including:
+
+✅ SOC 2 Type II Report (current)
+✅ Security Architecture Overview
+✅ Data Encryption Standards (AES-256, TLS 1.3)
+✅ Identity & Access Management Policies
+✅ Incident Response Playbook
+✅ Data Lifecycle Management Procedures
+
+Given the sensitive nature of these documents, I'll need you to sign our mutual NDA first. I'll send the NDA template to your email within the hour.
+
+Once executed, I can provide access to our secure compliance portal where all documents are available for download.
+
+Estimated processing time: 24-48 hours after NDA execution.
+
+Best regards,
+Michael Torres
+Head of Security Compliance`,
+                        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36),
+                        confidence: null
+                    }
+                ],
+                timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48) // 2 days ago
+            }
+        ];
+
+        // Add emails to the main array
+        this.emails = emailTemplates.map((template, index) => ({
+            id: index + 1,
+            ...template,
+            isRead: template.status !== 'unread',
+            hasAttachments: Math.random() > 0.7,
+            importance: template.priority
+        }));
+
+        // Update customer stats
+        this.emails.forEach(email => {
+            const customer = this.customers.get(email.customerId);
+            if (customer) {
+                customer.totalEmails++;
+                if (!customer.lastContact || email.timestamp > customer.lastContact) {
+                    customer.lastContact = email.timestamp;
+                }
+            }
+        });
+    }
+
+    /**
+     * Initialize UI components
+     */
+    async initializeUI() {
+        // Initialize filters
+        this.updateFilterCounts();
         
-        for (let i = 0; i < numInteractions; i++) {
-            const daysAgo = Math.floor(Math.random() * 90) + 1;
-            const timestamp = new Date(Date.now() - (daysAgo * 24 * 60 * 60 * 1000));
-            
-            interactions.push({
-                date: timestamp,
-                type: ['general', 'billing', 'shipping', 'technical', 'returns'][Math.floor(Math.random() * 5)],
-                subject: [
-                    'Order status inquiry',
-                    'Payment question', 
-                    'Product information request',
-                    'Technical support',
-                    'Return processed'
-                ][Math.floor(Math.random() * 5)],
-                status: ['resolved', 'ai-replied'][Math.floor(Math.random() * 2)],
-                summary: 'Customer inquiry resolved successfully with AI assistance.'
+        // Initialize stats
+        this.updateStats();
+        
+        // Initialize AI controls
+        this.initializeAIControls();
+        
+        // Add small delay for smooth transitions
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    /**
+     * Initialize AI controls
+     */
+    initializeAIControls() {
+        const aiToggle = document.getElementById('aiAutoReply');
+        const confidenceSlider = document.getElementById('confidenceSlider');
+        const confidenceValue = document.getElementById('confidenceValue');
+
+        if (aiToggle) {
+            aiToggle.checked = this.aiEnabled;
+        }
+
+        if (confidenceSlider) {
+            confidenceSlider.value = this.confidenceThreshold;
+        }
+
+        if (confidenceValue) {
+            confidenceValue.textContent = `${this.confidenceThreshold}%`;
+        }
+    }
+
+    /**
+     * Bind all event listeners
+     */
+    bindEventListeners() {
+        // Global search
+        const globalSearch = document.getElementById('globalSearch');
+        if (globalSearch) {
+            globalSearch.addEventListener('input', this.debounce((e) => {
+                this.searchQuery = e.target.value.toLowerCase().trim();
+                this.renderEmailList();
+                this.updateSearchClear();
+            }, 300));
+        }
+
+        // Search clear button
+        const clearSearch = document.getElementById('clearSearch');
+        if (clearSearch) {
+            clearSearch.addEventListener('click', () => {
+                this.clearSearch();
             });
         }
-        
-        return interactions.sort((a, b) => b.date - a.date);
-    }
 
-    bindEvents() {
-        // Check if essential DOM elements exist
-        const searchInput = document.getElementById('searchInput');
-        if (!searchInput) {
-            console.log('Search input element not found, retrying bindEvents in 500ms...');
-            setTimeout(() => this.bindEvents(), 500);
-            return;
-        }
-        
-        // Search functionality
-        searchInput.addEventListener('input', (e) => {
-            this.filters.search = e.target.value.toLowerCase();
-            this.renderEmails();
-        });
-
-        // Filter events
+        // Filter items
         document.querySelectorAll('.filter-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                document.querySelectorAll('.filter-item').forEach(f => f.classList.remove('active'));
-                item.classList.add('active');
-                this.filters.active = item.dataset.filter;
-                this.renderEmails();
+                e.preventDefault();
+                this.setFilter(item.dataset.filter);
             });
         });
 
-        // Category events
+        // Category items
         document.querySelectorAll('.category-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                if (this.filters.category === item.dataset.category) {
-                    this.filters.category = null;
-                    item.classList.remove('active');
-                } else {
-                    document.querySelectorAll('.category-item').forEach(c => c.classList.remove('active'));
-                    item.classList.add('active');
-                    this.filters.category = item.dataset.category;
-                }
-                this.renderEmails();
+                e.preventDefault();
+                this.toggleCategory(item.dataset.category);
             });
         });
 
-        // Control button events
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            this.refreshEmails();
-        });
+        // Control buttons
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.refreshEmails());
+        }
 
-        document.getElementById('selectAllBtn').addEventListener('click', () => {
-            this.toggleSelectAll();
-        });
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', () => this.toggleSelectAll());
+        }
 
-        // AI toggle
-        document.querySelector('.ai-indicator').addEventListener('click', () => {
-            this.toggleAIAutoReply();
-        });
-
-        // Modal events
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            this.closeModal('aiReplyModal');
-        });
-
-        document.getElementById('closeHistoryModalBtn').addEventListener('click', () => {
-            this.closeModal('customerHistoryModal');
-        });
-
-        // AI Reply Modal buttons
-        document.getElementById('regenerateBtn').addEventListener('click', () => {
-            this.regenerateAIReply();
-        });
-
-        document.getElementById('editReplyBtn').addEventListener('click', () => {
-            this.enableReplyEditing();
-        });
-
-        document.getElementById('sendReplyBtn').addEventListener('click', () => {
-            this.sendAIReply();
-        });
-
-        // Close modals when clicking outside
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeModal(modal.id);
-                }
+        // Sort options
+        document.querySelectorAll('.sort-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.setSort(option.dataset.sort);
             });
         });
+
+        // AI Controls
+        const aiToggle = document.getElementById('aiAutoReply');
+        if (aiToggle) {
+            aiToggle.addEventListener('change', (e) => {
+                this.aiEnabled = e.target.checked;
+                this.showNotification('info', 'AI Assistant', 
+                    `Auto-reply ${this.aiEnabled ? 'enabled' : 'disabled'}`);
+            });
+        }
+
+        const confidenceSlider = document.getElementById('confidenceSlider');
+        const confidenceValue = document.getElementById('confidenceValue');
+        if (confidenceSlider && confidenceValue) {
+            confidenceSlider.addEventListener('input', (e) => {
+                this.confidenceThreshold = parseInt(e.target.value);
+                confidenceValue.textContent = `${this.confidenceThreshold}%`;
+            });
+        }
+
+        // Modal close buttons
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => this.closeModal());
+        });
+
+        // Modal overlays
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', () => this.closeModal());
+        });
+
+        // AI Modal buttons
+        const regenerateBtn = document.getElementById('regenerateResponse');
+        if (regenerateBtn) {
+            regenerateBtn.addEventListener('click', () => this.regenerateAIResponse());
+        }
+
+        const sendBtn = document.getElementById('sendResponse');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => this.sendAIResponse());
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+
+        // Window resize
+        window.addEventListener('resize', this.debounce(() => this.handleResize(), 250));
     }
 
-    renderEmails() {
+    /**
+     * Handle keyboard shortcuts
+     */
+    handleKeyboardShortcuts(e) {
+        // Escape key closes modals
+        if (e.key === 'Escape' && this.currentModal) {
+            this.closeModal();
+        }
+
+        // Ctrl/Cmd + K focuses search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            const searchInput = document.getElementById('globalSearch');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+
+        // R key refreshes emails (when not in input)
+        if (e.key === 'r' && !this.isInputFocused() && !this.currentModal) {
+            e.preventDefault();
+            this.refreshEmails();
+        }
+    }
+
+    /**
+     * Check if an input element is currently focused
+     */
+    isInputFocused() {
+        const activeElement = document.activeElement;
+        return activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.contentEditable === 'true'
+        );
+    }
+
+    /**
+     * Handle window resize
+     */
+    handleResize() {
+        // Close mobile sidebar on resize to desktop
+        if (window.innerWidth > 768) {
+            this.sidebarOpen = false;
+            this.updateSidebarState();
+        }
+    }
+
+    /**
+     * Update sidebar state for mobile
+     */
+    updateSidebarState() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('open', this.sidebarOpen);
+        }
+    }
+
+    /**
+     * Clear search
+     */
+    clearSearch() {
+        this.searchQuery = '';
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        this.updateSearchClear();
+        this.renderEmailList();
+    }
+
+    /**
+     * Update search clear button visibility
+     */
+    updateSearchClear() {
+        const clearBtn = document.getElementById('clearSearch');
+        if (clearBtn) {
+            clearBtn.style.display = this.searchQuery ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Set current filter
+     */
+    setFilter(filter) {
+        this.currentFilter = filter;
+        
+        // Update active state
+        document.querySelectorAll('.filter-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.filter === filter);
+        });
+
+        // Update panel title
+        const panelTitle = document.getElementById('panelTitle');
+        if (panelTitle) {
+            const titles = {
+                all: 'All Emails',
+                unread: 'Unread Emails',
+                'ai-replied': 'AI Handled',
+                urgent: 'Urgent Emails',
+                resolved: 'Resolved Emails'
+            };
+            panelTitle.textContent = titles[filter] || 'Emails';
+        }
+
+        this.renderEmailList();
+    }
+
+    /**
+     * Toggle category filter
+     */
+    toggleCategory(category) {
+        if (this.currentCategory === category) {
+            this.currentCategory = null;
+        } else {
+            this.currentCategory = category;
+        }
+
+        // Update active state
+        document.querySelectorAll('.category-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.category === this.currentCategory);
+        });
+
+        this.renderEmailList();
+    }
+
+    /**
+     * Set sort method
+     */
+    setSort(sort) {
+        this.currentSort = sort;
+
+        // Update active state
+        document.querySelectorAll('.sort-option').forEach(option => {
+            option.classList.toggle('active', option.dataset.sort === sort);
+        });
+
+        this.renderEmailList();
+    }
+
+    /**
+     * Render all UI components
+     */
+    renderAll() {
+        this.renderEmailList();
+        this.updateStats();
+        this.updateFilterCounts();
+    }
+
+    /**
+     * Render the email list
+     */
+    renderEmailList() {
         const emailList = document.getElementById('emailList');
-        if (!emailList) {
-            console.log('Email list element not found, retrying in 500ms...');
-            setTimeout(() => this.renderEmails(), 500);
-            return;
-        }
-        
+        if (!emailList) return;
+
         const filteredEmails = this.getFilteredEmails();
+        const visibleCount = document.getElementById('visibleCount');
         
+        if (visibleCount) {
+            visibleCount.textContent = `${filteredEmails.length} email${filteredEmails.length !== 1 ? 's' : ''}`;
+        }
+
         if (filteredEmails.length === 0) {
-            emailList.innerHTML = `
-                <div class="no-emails">
-                    <i class="fas fa-inbox"></i>
-                    <h3>No emails found</h3>
-                    <p>Try adjusting your filters or search terms.</p>
-                </div>
-            `;
+            emailList.innerHTML = this.renderEmptyState();
             return;
         }
 
-        emailList.innerHTML = filteredEmails.map(email => {
-            const customer = this.customers.get(email.customerId);
-            const timeAgo = this.getTimeAgo(email.timestamp);
-            const isUnread = email.status === 'unread';
-            
-            return `
-                <div class="email-item ${isUnread ? 'unread' : ''} ${this.selectedEmail?.id === email.id ? 'selected' : ''}" 
-                     data-email-id="${email.id}">
-                    <div class="email-header">
-                        <div class="sender-info">
-                            <div class="sender-name">${customer.name}</div>
-                            <div class="sender-email">${customer.email}</div>
-                        </div>
-                        <div class="email-meta">
-                            <div class="email-time">${timeAgo}</div>
-                            <div class="email-priority priority-${email.priority}">
-                                <i class="fas fa-circle"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="email-subject">${email.subject}</div>
-                    <div class="email-preview-text">${this.truncateText(email.content, 100)}</div>
-                    <div class="email-tags">
-                        ${email.tags.map(tag => `<span class="email-tag ${tag}">${tag.replace('-', ' ')}</span>`).join('')}
-                        <span class="email-tag category-${email.category}">${email.category}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        const emailItems = filteredEmails.map(email => this.renderEmailItem(email)).join('');
+        emailList.innerHTML = emailItems;
 
-        // Add click events to email items
-        document.querySelectorAll('.email-item').forEach(item => {
-            item.addEventListener('click', () => {
+        // Bind email item click events
+        emailList.querySelectorAll('.email-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
                 const emailId = parseInt(item.dataset.emailId);
                 this.selectEmail(emailId);
             });
         });
+
+        // Add fade-in animation
+        emailList.classList.add('fade-in');
     }
 
+    /**
+     * Get filtered and sorted emails
+     */
     getFilteredEmails() {
-        return this.emails.filter(email => {
-            // Status filter
-            if (this.filters.active !== 'all' && email.status !== this.filters.active) {
-                return false;
-            }
+        let filtered = [...this.emails];
 
-            // Category filter
-            if (this.filters.category && email.category !== this.filters.category) {
-                return false;
-            }
-
-            // Search filter
-            if (this.filters.search) {
-                const customer = this.customers.get(email.customerId);
-                const searchText = `${customer.name} ${customer.email} ${email.subject} ${email.content}`.toLowerCase();
-                if (!searchText.includes(this.filters.search)) {
-                    return false;
+        // Apply filters
+        if (this.currentFilter !== 'all') {
+            filtered = filtered.filter(email => {
+                switch (this.currentFilter) {
+                    case 'unread':
+                        return email.status === 'unread';
+                    case 'ai-replied':
+                        return email.status === 'ai-replied';
+                    case 'urgent':
+                        return email.priority === 'high' || email.tags.includes('urgent');
+                    case 'resolved':
+                        return email.status === 'resolved';
+                    default:
+                        return true;
                 }
-            }
+            });
+        }
 
-            return true;
-        }).sort((a, b) => b.timestamp - a.timestamp);
+        // Apply category filter
+        if (this.currentCategory) {
+            filtered = filtered.filter(email => email.category === this.currentCategory);
+        }
+
+        // Apply search filter
+        if (this.searchQuery) {
+            filtered = filtered.filter(email => {
+                const customer = this.customers.get(email.customerId);
+                const searchText = `${email.subject} ${email.content} ${customer?.name} ${customer?.email}`.toLowerCase();
+                return searchText.includes(this.searchQuery);
+            });
+        }
+
+        // Apply sorting
+        filtered.sort((a, b) => {
+            switch (this.currentSort) {
+                case 'newest':
+                    return b.timestamp.getTime() - a.timestamp.getTime();
+                case 'oldest':
+                    return a.timestamp.getTime() - b.timestamp.getTime();
+                case 'priority':
+                    const priorityOrder = { high: 3, medium: 2, low: 1 };
+                    return priorityOrder[b.priority] - priorityOrder[a.priority];
+                case 'sender':
+                    const customerA = this.customers.get(a.customerId);
+                    const customerB = this.customers.get(b.customerId);
+                    return (customerA?.name || '').localeCompare(customerB?.name || '');
+                default:
+                    return 0;
+            }
+        });
+
+        return filtered;
     }
 
-    selectEmail(emailId) {
-        this.selectedEmail = this.emails.find(email => email.id === emailId);
-        if (!this.selectedEmail) return;
+    /**
+     * Render empty state
+     */
+    renderEmptyState() {
+        return `
+            <div class="detail-placeholder">
+                <div class="placeholder-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>No emails found</h3>
+                <p>Try adjusting your filters or search terms to find what you're looking for.</p>
+            </div>
+        `;
+    }
 
-        // Mark as read
-        if (this.selectedEmail.status === 'unread') {
-            this.selectedEmail.status = 'read';
+    /**
+     * Render individual email item
+     */
+    renderEmailItem(email) {
+        const customer = this.customers.get(email.customerId);
+        const timeAgo = this.formatTimeAgo(email.timestamp);
+        const isSelected = this.selectedEmail?.id === email.id;
+        
+        return `
+            <div class="email-item ${email.status === 'unread' ? 'unread' : ''} ${isSelected ? 'selected' : ''}" 
+                 data-email-id="${email.id}">
+                <div class="email-header">
+                    <div class="sender-info">
+                        <div class="sender-name">${customer?.name || 'Unknown'}</div>
+                        <div class="sender-email">${customer?.email || ''}</div>
+                    </div>
+                    <div class="email-meta">
+                        <div class="email-time">${timeAgo}</div>
+                        <div class="priority-indicator ${email.priority}"></div>
+                    </div>
+                </div>
+                <div class="email-subject">${email.subject}</div>
+                <div class="email-preview">${this.truncateText(email.content, 120)}</div>
+                <div class="email-tags">
+                    ${email.tags.map(tag => `<span class="email-tag ${tag}">${tag.replace('-', ' ')}</span>`).join('')}
+                    <span class="email-tag ${email.category}">${email.category}</span>
+                    ${email.hasAttachments ? '<span class="email-tag attachment"><i class="fas fa-paperclip"></i></span>' : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Select an email and show details
+     */
+    selectEmail(emailId) {
+        const email = this.emails.find(e => e.id === emailId);
+        if (!email) return;
+
+        this.selectedEmail = email;
+
+        // Mark as read if unread
+        if (email.status === 'unread') {
+            email.status = 'read';
+            email.isRead = true;
             this.updateFilterCounts();
         }
 
-        this.renderEmails();
-        this.renderEmailPreview();
+        // Update UI
+        this.renderEmailList();
+        this.renderEmailDetail();
     }
 
-    renderEmailPreview() {
-        if (!this.selectedEmail) return;
+    /**
+     * Render email detail panel
+     */
+    renderEmailDetail() {
+        const emailDetail = document.getElementById('emailDetail');
+        if (!emailDetail || !this.selectedEmail) return;
 
-        const customer = this.customers.get(this.selectedEmail.customerId);
-        const emailPreview = document.getElementById('emailPreview');
-
-        emailPreview.innerHTML = `
-            <div class="preview-header">
-                <div class="preview-subject">${this.selectedEmail.subject}</div>
-                <div class="preview-meta">
-                    <div class="preview-sender">
-                        <div class="sender-avatar">
-                            ${customer.name.charAt(0).toUpperCase()}
+        const email = this.selectedEmail;
+        const customer = this.customers.get(email.customerId);
+        
+        emailDetail.innerHTML = `
+            <div class="email-detail-content">
+                <div class="detail-header">
+                    <div class="detail-subject">${email.subject}</div>
+                    <div class="detail-meta">
+                        <div class="customer-info">
+                            <div class="customer-avatar">${customer?.avatar || '?'}</div>
+                            <div class="customer-details">
+                                <h4>${customer?.name || 'Unknown Customer'}</h4>
+                                <p>${customer?.email || ''}</p>
+                                <p>Customer since ${customer ? this.formatDate(new Date(customer.joinDate)) : 'Unknown'}</p>
+                            </div>
                         </div>
-                        <div class="sender-details">
-                            <h4>${customer.name}</h4>
-                            <p>${customer.email}</p>
-                            <p>${this.formatDateTime(this.selectedEmail.timestamp)}</p>
+                        <div class="detail-actions">
+                            <button class="action-btn" onclick="emailManager.showCustomerProfile(${email.customerId})">
+                                <i class="fas fa-user"></i> Profile
+                            </button>
+                            <button class="action-btn ai" onclick="emailManager.generateAIReply(${email.id})">
+                                <i class="fas fa-robot"></i> AI Reply
+                            </button>
+                            <button class="action-btn primary" onclick="emailManager.composeReply(${email.id})">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
                         </div>
-                    </div>
-                    <div class="preview-actions">
-                        <button class="action-btn" onclick="emailManager.showCustomerHistory(${customer.id})">
-                            <i class="fas fa-history"></i>
-                            History
-                        </button>
-                        <button class="action-btn ai" onclick="emailManager.generateAIReply()">
-                            <i class="fas fa-robot"></i>
-                            AI Reply
-                        </button>
-                        <button class="action-btn primary">
-                            <i class="fas fa-reply"></i>
-                            Reply
-                        </button>
                     </div>
                 </div>
-            </div>
-            <div class="preview-content">
-                ${this.formatEmailContent(this.selectedEmail.content)}
-                ${this.renderEmailThread()}
+                
+                <div class="email-content">${email.content}</div>
+                
+                ${email.thread.length > 0 ? this.renderEmailThread(email.thread) : ''}
             </div>
         `;
     }
 
-    renderEmailThread() {
-        if (!this.selectedEmail.thread || this.selectedEmail.thread.length === 0) {
-            return '';
-        }
+    /**
+     * Render email thread
+     */
+    renderEmailThread(thread) {
+        if (!thread.length) return '';
 
         return `
             <div class="email-thread">
-                <h4>Thread History</h4>
-                ${this.selectedEmail.thread.map(item => `
-                    <div class="thread-item ${item.type}">
-                        <div class="thread-header">
-                            <span class="thread-type">
-                                ${item.type === 'ai-reply' ? '<i class="fas fa-robot ai-icon"></i> AI Reply' : 
-                                  item.type === 'customer-reply' ? '<i class="fas fa-user"></i> Customer Reply' : 'Reply'}
-                            </span>
-                            <span class="thread-time">${this.getTimeAgo(item.timestamp)}</span>
-                            ${item.confidence ? `<span class="thread-confidence">${item.confidence}% confidence</span>` : ''}
-                        </div>
-                        <div class="thread-content">${this.formatEmailContent(item.content)}</div>
-                    </div>
-                `).join('')}
+                <div class="thread-title">
+                    <i class="fas fa-comments"></i>
+                    Conversation History
+                </div>
+                ${thread.map(item => this.renderThreadItem(item)).join('')}
             </div>
         `;
     }
 
-    formatEmailContent(content) {
-        return content.split('\n').map(paragraph => 
-            paragraph.trim() ? `<p>${paragraph}</p>` : ''
-        ).join('');
+    /**
+     * Render thread item
+     */
+    renderThreadItem(item) {
+        const timeAgo = this.formatTimeAgo(item.timestamp);
+        const isAI = item.type === 'ai-reply';
+        
+        return `
+            <div class="thread-item ${item.type}">
+                <div class="thread-header">
+                    <div class="thread-author">
+                        ${isAI ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>'}
+                        ${item.author}
+                        ${item.confidence ? `<span class="confidence-badge">${item.confidence}% confidence</span>` : ''}
+                    </div>
+                    <div class="thread-time">${timeAgo}</div>
+                </div>
+                <div class="thread-content">${item.content}</div>
+            </div>
+        `;
     }
 
+    /**
+     * Generate AI reply for an email
+     */
+    generateAIReply(emailId) {
+        const email = this.emails.find(e => e.id === emailId);
+        if (!email) return;
+
+        this.showAIModal(email);
+    }
+
+    /**
+     * Show AI reply modal
+     */
+    showAIModal(email) {
+        const modal = document.getElementById('aiModal');
+        const responseText = document.getElementById('aiResponseText');
+        const confidenceFill = document.getElementById('modalConfidenceFill');
+        const confidenceText = document.getElementById('modalConfidenceText');
+        const responseTime = document.getElementById('responseTime');
+
+        if (!modal || !responseText) return;
+
+        this.currentModal = 'aiModal';
+        modal.classList.add('show');
+
+        // Show generating state
+        responseText.value = 'Generating AI response...';
+        responseText.disabled = true;
+
+        // Simulate AI generation
+        const startTime = Date.now();
+        setTimeout(() => {
+            const aiResponse = this.generateAIResponseText(email);
+            const confidence = aiResponse.confidence;
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+            responseText.value = aiResponse.content;
+            responseText.disabled = false;
+
+            if (confidenceFill) {
+                confidenceFill.style.width = `${confidence}%`;
+            }
+            if (confidenceText) {
+                confidenceText.textContent = `${confidence}%`;
+            }
+            if (responseTime) {
+                responseTime.textContent = `${duration}s`;
+            }
+        }, 1500 + Math.random() * 1000); // 1.5-2.5 seconds
+    }
+
+    /**
+     * Generate AI response text based on email content
+     */
+    generateAIResponseText(email) {
+        const customer = this.customers.get(email.customerId);
+        const templates = {
+            support: {
+                high: {
+                    content: `Hi ${customer?.name || 'there'},\n\nThank you for reaching out about this urgent issue. I understand the critical nature of this problem and I'm prioritizing your case immediately.\n\nI've escalated this to our technical team and we're investigating the root cause. Based on your description, this appears to be [specific technical issue]. Here's what we're doing:\n\n1. Immediate investigation by our senior engineers\n2. Temporary workaround implementation if available\n3. Root cause analysis and permanent fix\n4. Prevention measures to avoid recurrence\n\nI'll provide updates every 2 hours until this is resolved. You can also reach me directly at [support phone] for immediate assistance.\n\nThank you for your patience as we work to resolve this quickly.\n\nBest regards,\nAI Technical Support`,
+                    confidence: 92
+                },
+                medium: {
+                    content: `Hi ${customer?.name || 'there'},\n\nThank you for contacting our support team. I've reviewed your issue and I'm here to help resolve this for you.\n\nBased on your description, this appears to be related to [relevant area]. Here are the steps I recommend:\n\n1. [First troubleshooting step]\n2. [Second troubleshooting step]\n3. [Third troubleshooting step]\n\nIf these steps don't resolve the issue, please let me know and I'll investigate further. I've also included some additional resources that might be helpful: [documentation links].\n\nI'm committed to getting this working for you. Please don't hesitate to reach out if you need any clarification on these steps.\n\nBest regards,\nAI Support Assistant`,
+                    confidence: 87
+                }
+            },
+            billing: {
+                content: `Hi ${customer?.name || 'there'},\n\nThank you for reaching out about your billing inquiry. I've reviewed your account and understand your concern.\n\nI can see the issue you've mentioned and I want to resolve this quickly for you. Here's what I've found and what I'm doing:\n\n✅ Account review completed\n✅ Issue confirmed and documented\n✅ Correction/refund initiated\n✅ Account notes updated to prevent recurrence\n\nThe resolution should be reflected in your account within 3-5 business days. You'll receive an email confirmation with all the details and reference numbers.\n\nI apologize for any inconvenience this may have caused. If you have any questions about this resolution, please don't hesitate to contact me.\n\nBest regards,\nAI Billing Support`,
+                confidence: 94
+            },
+            sales: {
+                content: `Hi ${customer?.name || 'there'},\n\nThank you for your interest in our solutions! I'm excited to help you find the perfect fit for your needs.\n\nBased on your requirements, I can see that you're looking for [specific features/solutions]. Here's what I recommend:\n\n📋 **Recommended Solution:**\n• [Plan/Package details]\n• Key features that match your needs\n• Pricing and any applicable discounts\n• Implementation timeline\n\n🎯 **Next Steps:**\n1. Review the proposed solution\n2. Schedule a demo call if you'd like\n3. Discuss any customization needs\n4. Plan implementation timeline\n\nI'd love to schedule a brief call to discuss your specific requirements and show you how our solution can benefit your organization. Are you available for a 30-minute demo this week?\n\nLooking forward to working with you!\n\nBest regards,\nAI Sales Assistant`,
+                confidence: 89
+            }
+        };
+
+        const categoryTemplate = templates[email.category];
+        if (!categoryTemplate) {
+            return {
+                content: `Hi ${customer?.name || 'there'},\n\nThank you for reaching out. I've received your message and I'm here to help.\n\nI'm reviewing your request and will provide a detailed response shortly. In the meantime, please let me know if you have any urgent questions.\n\nBest regards,\nAI Customer Support`,
+                confidence: 75
+            };
+        }
+
+        if (email.category === 'support' && categoryTemplate[email.priority]) {
+            return categoryTemplate[email.priority];
+        }
+
+        return categoryTemplate;
+    }
+
+    /**
+     * Regenerate AI response
+     */
+    regenerateAIResponse() {
+        if (!this.selectedEmail) return;
+        
+        this.showAIModal(this.selectedEmail);
+        this.showNotification('info', 'AI Assistant', 'Regenerating response...');
+    }
+
+    /**
+     * Send AI response
+     */
+    sendAIResponse() {
+        const responseText = document.getElementById('aiResponseText');
+        const confidenceText = document.getElementById('modalConfidenceText');
+        
+        if (!responseText || !this.selectedEmail) return;
+
+        const response = responseText.value.trim();
+        if (!response) {
+            this.showNotification('error', 'Error', 'Please enter a response before sending.');
+            return;
+        }
+
+        // Add response to email thread
+        this.selectedEmail.thread.push({
+            type: 'ai-reply',
+            author: 'AI Assistant',
+            content: response,
+            timestamp: new Date(),
+            confidence: parseInt(confidenceText?.textContent || '85')
+        });
+
+        // Update email status
+        this.selectedEmail.status = 'ai-replied';
+        this.selectedEmail.tags = this.selectedEmail.tags.filter(tag => tag !== 'pending');
+        if (!this.selectedEmail.tags.includes('ai-replied')) {
+            this.selectedEmail.tags.push('ai-replied');
+        }
+
+        // Close modal and update UI
+        this.closeModal();
+        this.renderEmailDetail();
+        this.renderEmailList();
+        this.updateFilterCounts();
+
+        this.showNotification('success', 'AI Reply Sent', 'Response has been sent successfully.');
+    }
+
+    /**
+     * Show customer profile modal
+     */
+    showCustomerProfile(customerId) {
+        const customer = this.customers.get(customerId);
+        if (!customer) return;
+
+        const modal = document.getElementById('customerModal');
+        const profileContent = document.getElementById('customerProfile');
+
+        if (!modal || !profileContent) return;
+
+        const customerEmails = this.emails.filter(email => email.customerId === customerId);
+        const avgResponseTime = '2.3 hours'; // Mock data
+        
+        profileContent.innerHTML = `
+            <div class="customer-profile-header">
+                <div class="customer-avatar-large">${customer.avatar}</div>
+                <div class="customer-info-detailed">
+                    <h3>${customer.name}</h3>
+                    <p class="customer-email">${customer.email}</p>
+                    <p class="customer-company">${customer.company}</p>
+                    <div class="customer-tier ${customer.tier}">${customer.tier.toUpperCase()}</div>
+                </div>
+            </div>
+            
+            <div class="customer-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Emails</span>
+                    <span class="stat-value">${customer.totalEmails}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Satisfaction</span>
+                    <span class="stat-value">${customer.satisfaction}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Avg Response</span>
+                    <span class="stat-value">${avgResponseTime}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Last Contact</span>
+                    <span class="stat-value">${customer.lastContact ? this.formatTimeAgo(customer.lastContact) : 'Never'}</span>
+                </div>
+            </div>
+            
+            <div class="customer-tags">
+                <h4>Tags</h4>
+                <div class="tag-list">
+                    ${customer.tags.map(tag => `<span class="customer-tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+            
+            <div class="customer-emails">
+                <h4>Recent Emails (${customerEmails.length})</h4>
+                <div class="email-history">
+                    ${customerEmails.slice(0, 5).map(email => `
+                        <div class="history-item" onclick="emailManager.selectEmail(${email.id}); emailManager.closeModal();">
+                            <div class="history-subject">${email.subject}</div>
+                            <div class="history-meta">
+                                <span class="history-status ${email.status}">${email.status}</span>
+                                <span class="history-time">${this.formatTimeAgo(email.timestamp)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        this.currentModal = 'customerModal';
+        modal.classList.add('show');
+    }
+
+    /**
+     * Close current modal
+     */
+    closeModal() {
+        if (!this.currentModal) return;
+
+        const modal = document.getElementById(this.currentModal);
+        if (modal) {
+            modal.classList.remove('show');
+        }
+
+        this.currentModal = null;
+    }
+
+    /**
+     * Refresh emails (simulate new emails)
+     */
+    refreshEmails() {
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+        }
+
+        // Simulate refresh delay
+        setTimeout(() => {
+            // Simulate new email arrival (10% chance)
+            if (Math.random() < 0.1) {
+                this.addNewEmail();
+            }
+
+            // Update timestamps to simulate activity
+            this.emails.forEach(email => {
+                if (Math.random() < 0.05) { // 5% chance of update
+                    email.timestamp = new Date(email.timestamp.getTime() + Math.random() * 300000); // Add up to 5 minutes
+                }
+            });
+
+            this.renderEmailList();
+            this.updateFilterCounts();
+
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }
+
+            this.showNotification('success', 'Refreshed', 'Email list updated successfully.');
+        }, 1000);
+    }
+
+    /**
+     * Add a new sample email
+     */
+    addNewEmail() {
+        const randomCustomerId = Math.floor(Math.random() * 8) + 1;
+        const customer = this.customers.get(randomCustomerId);
+        
+        const subjects = [
+            'Quick Question About Features',
+            'Follow-up on Previous Issue',
+            'New Support Request',
+            'Billing Inquiry',
+            'Integration Help Needed'
+        ];
+
+        const newEmail = {
+            id: Math.max(...this.emails.map(e => e.id)) + 1,
+            customerId: randomCustomerId,
+            subject: subjects[Math.floor(Math.random() * subjects.length)],
+            content: 'This is a new email that just arrived...',
+            category: ['support', 'billing', 'sales', 'general'][Math.floor(Math.random() * 4)],
+            priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+            status: 'unread',
+            tags: ['new'],
+            thread: [],
+            timestamp: new Date(),
+            isRead: false,
+            hasAttachments: Math.random() > 0.8
+        };
+
+        this.emails.unshift(newEmail);
+        
+        // Update customer stats
+        if (customer) {
+            customer.totalEmails++;
+            customer.lastContact = newEmail.timestamp;
+        }
+    }
+
+    /**
+     * Toggle select all emails
+     */
+    toggleSelectAll() {
+        // Implementation for bulk actions
+        this.showNotification('info', 'Bulk Actions', 'Select all functionality would be implemented here.');
+    }
+
+    /**
+     * Update filter counts
+     */
     updateFilterCounts() {
         const counts = {
             all: this.emails.length,
             unread: this.emails.filter(e => e.status === 'unread').length,
             'ai-replied': this.emails.filter(e => e.status === 'ai-replied').length,
-            pending: this.emails.filter(e => e.tags.includes('pending')).length,
+            urgent: this.emails.filter(e => e.priority === 'high' || e.tags.includes('urgent')).length,
             resolved: this.emails.filter(e => e.status === 'resolved').length
         };
 
-        Object.keys(counts).forEach(filter => {
-            const element = document.querySelector(`[data-filter="${filter}"] .count`);
+        Object.entries(counts).forEach(([filter, count]) => {
+            const element = document.getElementById(`count${filter.charAt(0).toUpperCase() + filter.slice(1).replace('-', '')}`);
             if (element) {
-                element.textContent = counts[filter];
+                element.textContent = count;
             }
         });
     }
 
-    generateAIReply() {
-        if (!this.selectedEmail) return;
+    /**
+     * Update dashboard stats
+     */
+    updateStats() {
+        const totalEmails = document.getElementById('totalEmails');
+        const aiReplies = document.getElementById('aiReplies');
 
-        const modal = document.getElementById('aiReplyModal');
-        const textarea = document.getElementById('aiReplyText');
-        const confidenceBar = document.getElementById('confidenceFill');
-        const confidenceValue = document.getElementById('confidenceValue');
-
-        // Simulate AI processing
-        textarea.value = 'Generating AI response...';
-        modal.classList.add('show');
-
-        setTimeout(() => {
-            const aiReply = this.getAIReplyForEmail(this.selectedEmail);
-            textarea.value = aiReply.content;
-            
-            const confidence = aiReply.confidence;
-            confidenceBar.style.width = `${confidence}%`;
-            confidenceValue.textContent = `${confidence}%`;
-        }, 1500);
-    }
-
-    getAIReplyForEmail(email) {
-        const customer = this.customers.get(email.customerId);
-        
-        // AI reply templates based on category and content
-        const templates = {
-            shipping: {
-                delayed: {
-                    content: `Dear ${customer.name},\n\nThank you for reaching out about your order. I understand your concern about the delivery delay, and I sincerely apologize for any inconvenience.\n\nI've checked your order status and can see that there was an unexpected delay in our fulfillment center. Your order is now being prioritized and should ship within the next 24 hours. You'll receive a tracking number via email once it's dispatched.\n\nAs an apology for the delay, I've applied a 15% discount to your next order. The discount code SORRY15 will be automatically applied to your account.\n\nThank you for your patience and understanding.`,
-                    confidence: 88
-                },
-                address: {
-                    content: `Hello ${customer.name},\n\nThank you for contacting us about updating your shipping address. Good news! Since your order was placed recently and hasn't entered our fulfillment process yet, I was able to update the shipping address as requested.\n\nYour new shipping address has been confirmed and you'll receive an updated order confirmation email shortly. Your order should still arrive within the originally estimated timeframe.\n\nIf you have any other questions, please don't hesitate to reach out.`,
-                    confidence: 94
-                }
-            },
-            billing: {
-                duplicate: {
-                    content: `Dear ${customer.name},\n\nThank you for bringing this billing concern to our attention. I understand how frustrating duplicate charges can be, and I'm here to resolve this quickly.\n\nI've reviewed your account and confirmed that there was indeed a duplicate charge. This appears to be a processing error on our end. I've immediately initiated a refund for the duplicate amount, which should appear in your account within 3-5 business days.\n\nYou'll receive an email confirmation with the refund details shortly. Again, I apologize for this error and any inconvenience it may have caused.`,
-                    confidence: 92
-                }
-            },
-            technical: {
-                app_crash: {
-                    content: `Hi ${customer.name},\n\nI'm sorry to hear you're experiencing issues with our mobile app. App crashes can be frustrating, and I'm here to help you resolve this.\n\nBased on your device information (iPhone 14 with iOS 17.1), this appears to be related to a known compatibility issue that we've recently addressed. Please try the following steps:\n\n1. Update to the latest app version (v2.1.3) from the App Store\n2. Restart your device after the update\n3. Clear the app cache by logging out and back in\n\nIf the issue persists, please let me know and I can escalate this to our technical team for further investigation.`,
-                    confidence: 85
-                },
-                account_access: {
-                    content: `Hello ${customer.name},\n\nI understand how frustrating it can be when you can't access your account. Let me help you regain access quickly.\n\nI've checked our system and found that your account may have been temporarily locked due to multiple login attempts. I've unlocked your account and reset your password.\n\nYou should receive a password reset email within the next few minutes. Please check your spam folder if you don't see it in your inbox.\n\nOnce you've reset your password, you should be able to access your account normally. If you continue to experience issues, please reply to this email and I'll personally ensure it's resolved.`,
-                    confidence: 90
-                }
-            },
-            returns: {
-                defective: {
-                    content: `Dear ${customer.name},\n\nI'm sorry to hear that your wireless headphones aren't working properly. Product defects are certainly not the experience we want our customers to have.\n\nSince your order is within our 30-day return window and you have the original packaging, you're eligible for a full refund or replacement. I've generated a prepaid return shipping label that I'm sending to your email address.\n\nOnce we receive the returned item, we'll process your refund within 3-5 business days. If you'd prefer a replacement instead, please let me know and I can arrange that for you.\n\nThank you for giving us the opportunity to make this right.`,
-                    confidence: 88
-                }
-            },
-            general: {
-                recommendation: {
-                    content: `Hi ${customer.name},\n\nThank you for reaching out about laptop recommendations for your daughter's computer science studies. I'd be happy to help you find the perfect device!\n\nBased on your budget of $1200-1500 and the need for programming/development work, I'd recommend these options:\n\n1. MacBook Air M2 (starting at $1,299) - Excellent for CS students, long battery life, Unix-based system\n2. Dell XPS 13 Plus (starting at $1,199) - Great Windows/Linux development environment, powerful performance\n\nBoth laptops offer excellent performance for coding, are lightweight for campus use, and fall within your budget. Would you like detailed specifications for either option, or do you have specific software requirements I should consider?`,
-                    confidence: 85
-                }
-            }
-        };
-
-        // Determine the best template based on email content
-        const category = email.category;
-        const content = email.content.toLowerCase();
-        
-        if (category === 'shipping') {
-            if (content.includes('delay') || content.includes('late') || content.includes('arrive')) {
-                return templates.shipping.delayed;
-            } else if (content.includes('address') || content.includes('change')) {
-                return templates.shipping.address;
-            }
-        } else if (category === 'billing') {
-            if (content.includes('duplicate') || content.includes('twice') || content.includes('charged')) {
-                return templates.billing.duplicate;
-            }
-        } else if (category === 'technical') {
-            if (content.includes('crash') || content.includes('app') || content.includes('load')) {
-                return templates.technical.app_crash;
-            } else if (content.includes('login') || content.includes('password') || content.includes('access')) {
-                return templates.technical.account_access;
-            }
-        } else if (category === 'returns') {
-            if (content.includes('return') || content.includes('defective') || content.includes('not working')) {
-                return templates.returns.defective;
-            }
-        } else if (category === 'general') {
-            if (content.includes('recommend') || content.includes('laptop') || content.includes('computer')) {
-                return templates.general.recommendation;
-            }
+        if (totalEmails) {
+            totalEmails.textContent = this.emails.length;
         }
 
-        // Default generic response
-        return {
-            content: `Dear ${customer.name},\n\nThank you for contacting us. I've received your message and I'm looking into your inquiry.\n\nI'll provide you with a detailed response shortly. In the meantime, if you have any urgent questions, please don't hesitate to reach out.\n\nBest regards,\nCustomer Support Team`,
-            confidence: 75
-        };
-    }
-
-    regenerateAIReply() {
-        const textarea = document.getElementById('aiReplyText');
-        const confidenceBar = document.getElementById('confidenceFill');
-        const confidenceValue = document.getElementById('confidenceValue');
-
-        textarea.value = 'Regenerating response...';
-        
-        setTimeout(() => {
-            const aiReply = this.getAIReplyForEmail(this.selectedEmail);
-            // Slightly different confidence for regenerated reply
-            const newConfidence = Math.max(70, aiReply.confidence + (Math.random() * 10 - 5));
-            
-            textarea.value = aiReply.content;
-            confidenceBar.style.width = `${newConfidence}%`;
-            confidenceValue.textContent = `${Math.round(newConfidence)}%`;
-        }, 1000);
-    }
-
-    enableReplyEditing() {
-        const textarea = document.getElementById('aiReplyText');
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-        
-        // Change button text to indicate editing mode
-        const editBtn = document.getElementById('editReplyBtn');
-        editBtn.innerHTML = '<i class="fas fa-check"></i> Editing Enabled';
-        editBtn.style.backgroundColor = 'var(--secondary-green)';
-        editBtn.style.borderColor = 'var(--secondary-green)';
-        editBtn.style.color = 'white';
-    }
-
-    async sendAIReply() {
-        const textarea = document.getElementById('aiReplyText');
-        const reply = textarea.value.trim();
-        
-        if (!reply) {
-            alert('Please enter a reply before sending.');
-            return;
-        }
-
-        // Check if we're in Gmail mode and send real email
-        if (this.gmailMode && this.selectedEmail.gmailId) {
-            const success = await this.sendGmailReply(this.selectedEmail, reply);
-            if (!success) {
-                return; // Error already shown
-            }
-        } else {
-            // Sample data mode - just update locally
-            this.selectedEmail.thread.push({
-                type: 'ai-reply',
-                content: reply,
-                timestamp: new Date(),
-                confidence: parseInt(document.getElementById('confidenceValue').textContent)
-            });
-
-            // Update email status
-            this.selectedEmail.status = 'ai-replied';
-            this.selectedEmail.tags = ['ai-replied'];
-        }
-
-        // Close modal and refresh views
-        this.closeModal('aiReplyModal');
-        this.renderEmails();
-        this.renderEmailPreview();
-        this.updateFilterCounts();
-
-        // Show success message
-        const message = this.gmailMode ? 'Gmail reply sent successfully!' : 'AI reply sent successfully!';
-        this.showNotification(message, 'success');
-    }
-
-    showCustomerHistory(customerId) {
-        const customer = this.customers.get(customerId);
-        const modal = document.getElementById('customerHistoryModal');
-        
-        document.getElementById('customerName').textContent = customer.name;
-        document.getElementById('customerEmail').textContent = customer.email;
-        document.getElementById('customerJoined').textContent = `Customer since: ${this.formatDate(new Date(customer.joinDate))}`;
-
-        const historyContainer = document.getElementById('interactionHistory');
-        historyContainer.innerHTML = customer.interactions.map(interaction => `
-            <div class="history-item ${interaction.status}">
-                <div class="history-date">${this.formatDate(interaction.date)}</div>
-                <div class="history-subject">${interaction.subject}</div>
-                <div class="history-summary">${interaction.summary}</div>
-            </div>
-        `).join('');
-
-        modal.classList.add('show');
-    }
-
-    toggleAIAutoReply() {
-        this.aiAutoReplyEnabled = !this.aiAutoReplyEnabled;
-        const indicator = document.querySelector('.ai-indicator');
-        
-        if (this.aiAutoReplyEnabled) {
-            indicator.classList.add('active');
-            indicator.innerHTML = '<i class="fas fa-robot"></i> AI Auto-Reply: ON';
-        } else {
-            indicator.classList.remove('active');
-            indicator.innerHTML = '<i class="fas fa-robot"></i> AI Auto-Reply: OFF';
+        if (aiReplies) {
+            const aiCount = this.emails.filter(e => e.status === 'ai-replied').length;
+            aiReplies.textContent = aiCount;
         }
     }
 
-    async refreshEmails() {
-        const refreshBtn = document.getElementById('refreshBtn');
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
-        
-        try {
-            if (this.gmailMode && window.gmailAuth && window.gmailAuth.isUserSignedIn()) {
-                // Refresh from Gmail
-                await this.refreshGmailEmails();
-            } else {
-                // Simulate new emails arriving in sample mode
-                setTimeout(() => {
-                    if (Math.random() > 0.5) {
-                        this.addNewEmail();
-                    }
-                    
-                    this.renderEmails();
-                    this.updateFilterCounts();
-                    this.showNotification('Sample emails refreshed', 'info');
-                }, 1500);
-            }
-        } catch (error) {
-            console.error('Failed to refresh emails:', error);
-            this.showNotification('Failed to refresh emails', 'error');
-        } finally {
-            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
-        }
-    }
+    /**
+     * Show notification
+     */
+    showNotification(type, title, message) {
+        const container = document.getElementById('notifications');
+        if (!container) return;
 
-    addNewEmail() {
-        const newEmail = {
-            id: this.emails.length + 1,
-            customerId: Math.floor(Math.random() * 8) + 1,
-            subject: 'New customer inquiry',
-            content: 'This is a new email that just arrived...',
-            timestamp: new Date(),
-            status: 'unread',
-            category: ['general', 'billing', 'shipping', 'technical', 'returns'][Math.floor(Math.random() * 5)],
-            priority: 'medium',
-            tags: ['pending'],
-            thread: []
-        };
-        
-        this.emails.unshift(newEmail);
-    }
-
-    toggleSelectAll() {
-        const emailItems = document.querySelectorAll('.email-item');
-        const allSelected = Array.from(emailItems).every(item => item.classList.contains('selected'));
-        
-        emailItems.forEach(item => {
-            if (allSelected) {
-                item.classList.remove('selected');
-            } else {
-                item.classList.add('selected');
-            }
-        });
-    }
-
-    closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        modal.classList.remove('show');
-        
-        // Reset edit button if it was modified
-        if (modalId === 'aiReplyModal') {
-            const editBtn = document.getElementById('editReplyBtn');
-            editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit Reply';
-            editBtn.style.backgroundColor = '';
-            editBtn.style.borderColor = '';
-            editBtn.style.color = '';
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
+        
+        const icons = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
+        };
+
         notification.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i>
-            <span>${message}</span>
+            <div class="notification-content">
+                <div class="notification-icon ${type}">
+                    <i class="${icons[type]}"></i>
+                </div>
+                <div class="notification-text">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         `;
-        
-        // Add to page
-        document.body.appendChild(notification);
-        
-        // Style the notification
-        Object.assign(notification.style, {
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            padding: '12px 20px',
-            borderRadius: '6px',
-            color: 'white',
-            backgroundColor: type === 'success' ? 'var(--secondary-green)' : 
-                           type === 'error' ? '#f44336' : 'var(--primary-blue)',
-            boxShadow: 'var(--shadow)',
-            zIndex: '10000',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'slideInRight 0.3s ease'
+
+        // Add close functionality
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
         });
-        
-        // Remove after 3 seconds
+
+        container.appendChild(notification);
+
+        // Show notification
+        setTimeout(() => notification.classList.add('show'), 100);
+
+        // Auto remove after 5 seconds
         setTimeout(() => {
-            notification.style.animation = 'slideOutRight 0.3s ease';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 3000);
-    }
-
-    // Gmail Integration Methods
-    async refreshGmailEmails() {
-        if (!window.gmailAPI || !window.gmailAuth || !window.gmailAuth.isUserSignedIn()) {
-            this.showNotification('Please connect to Gmail first', 'error');
-            return;
-        }
-
-        try {
-            this.showNotification('Fetching emails from Gmail...', 'info');
-            
-            const gmailEmails = await window.gmailAPI.fetchEmails('in:inbox', 50);
-            
-            // Convert Gmail emails to our format and update customers
-            this.emails = gmailEmails.map(email => {
-                // Add customer to our system
-                if (!this.customers.has(email.customerId)) {
-                    this.customers.set(email.customerId, {
-                        id: email.customerId,
-                        name: email.senderInfo.name,
-                        email: email.senderInfo.email,
-                        joinDate: new Date().toISOString().split('T')[0],
-                        interactions: this.generateCustomerHistory(email.customerId)
-                    });
-                }
-                
-                return email;
-            });
-
-            this.gmailMode = true;
-            this.renderEmails();
-            this.updateFilterCounts();
-            
-            this.showNotification(`Loaded ${gmailEmails.length} emails from Gmail`, 'success');
-        } catch (error) {
-            console.error('Failed to refresh Gmail emails:', error);
-            this.showNotification('Failed to fetch Gmail emails', 'error');
-        }
-    }
-
-    switchToSampleData() {
-        this.emails = [...this.sampleEmails];
-        this.gmailMode = false;
-        this.renderEmails();
-        this.updateFilterCounts();
-        this.showNotification('Switched to sample data', 'info');
-    }
-
-    async sendGmailReply(originalEmail, replyContent) {
-        if (!window.gmailAPI || !window.gmailAuth || !window.gmailAuth.isUserSignedIn()) {
-            this.showNotification('Please connect to Gmail first', 'error');
-            return false;
-        }
-
-        try {
-            const result = await window.gmailAPI.sendReply(originalEmail, replyContent, true);
-            
-            // Update email status in our local data
-            const emailIndex = this.emails.findIndex(e => e.id === originalEmail.id);
-            if (emailIndex !== -1) {
-                this.emails[emailIndex].status = 'ai-replied';
-                this.emails[emailIndex].tags = ['ai-replied'];
-                this.emails[emailIndex].thread.push({
-                    type: 'ai-reply',
-                    content: replyContent,
-                    timestamp: new Date(),
-                    confidence: parseInt(document.getElementById('confidenceValue').textContent)
-                });
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
             }
-
-            return true;
-        } catch (error) {
-            console.error('Failed to send Gmail reply:', error);
-            this.showNotification('Failed to send Gmail reply', 'error');
-            return false;
-        }
+        }, 5000);
     }
 
-    // Utility functions
-    getTimeAgo(timestamp) {
+    /**
+     * Utility: Debounce function
+     */
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    /**
+     * Utility: Format time ago
+     */
+    formatTimeAgo(date) {
         const now = new Date();
-        const diff = now - timestamp;
+        const diff = now.getTime() - date.getTime();
         const minutes = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
 
-        if (minutes < 60) {
-            return `${minutes}m ago`;
-        } else if (hours < 24) {
-            return `${hours}h ago`;
-        } else {
-            return `${days}d ago`;
-        }
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        
+        return date.toLocaleDateString();
     }
 
-    formatDateTime(timestamp) {
-        return timestamp.toLocaleString('en-US', {
-            weekday: 'short',
+    /**
+     * Utility: Format date
+     */
+    formatDate(date) {
+        return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    formatDate(timestamp) {
-        return timestamp.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
             day: 'numeric'
         });
     }
 
+    /**
+     * Utility: Truncate text
+     */
     truncateText(text, maxLength) {
-        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        if (text.length <= maxLength) return text;
+        return text.substr(0, maxLength) + '...';
+    }
+
+    /**
+     * Compose reply (placeholder)
+     */
+    composeReply(emailId) {
+        this.showNotification('info', 'Compose Reply', 'Manual reply composition would be implemented here.');
     }
 }
 
-// Initialize the application
+// Global instance
 let emailManager;
 
-// Initialize when DOM is ready or immediately if already ready
-function initializeApp() {
-    if (!window.emailManager) {
-        console.log('Creating Email Manager instance...');
-        window.emailManager = emailManager = new EmailManager();
-    } else {
-        emailManager = window.emailManager;
-    }
-    
-    // Add some additional CSS for notifications
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-        
-        .no-emails {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 48px 24px;
-            color: var(--dark-grey);
-            text-align: center;
-        }
-        
-        .no-emails i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            color: var(--medium-grey);
-        }
-        
-        .no-emails h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        .no-emails p {
-            font-size: 14px;
-            color: var(--dark-grey);
-        }
-        
-        .email-thread {
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        .email-thread h4 {
-            margin-bottom: 16px;
-            color: var(--text-dark);
-            font-size: 16px;
-        }
-        
-        .thread-item {
-            background-color: var(--light-grey);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-        
-        .thread-item.ai-reply {
-            border-left: 4px solid var(--ai-purple);
-        }
-        
-        .thread-item.customer-reply {
-            border-left: 4px solid var(--primary-blue);
-        }
-        
-        .thread-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 12px;
-        }
-        
-        .thread-type {
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .thread-time {
-            color: var(--dark-grey);
-        }
-        
-        .thread-confidence {
-            color: var(--ai-purple);
-            font-weight: 500;
-        }
-        
-        .thread-content {
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        
-        .priority-high {
-            color: #f44336;
-        }
-        
-        .priority-medium {
-            color: var(--accent-orange);
-        }
-        
-        .priority-low {
-            color: var(--secondary-green);
-        }
-    `;
-    document.head.appendChild(style);
-}
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    emailManager = new EmailManagerPro();
+});
 
-// Initialize when ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-    initializeApp();
-} 
+// Make emailManager available globally for button clicks
+window.emailManager = emailManager; 
